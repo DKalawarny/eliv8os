@@ -53,10 +53,13 @@ export const EMBEDDING_DIMS = 384
 // tokens, so this is just a safety belt.
 const MAX_CHARS_PER_INPUT = 8_000
 
-// Batch size — OpenAI accepts up to 2,048 inputs per call. We use 128 to
-// match Voyage's batching behaviour and to keep request bodies under
-// ~1MB on long chunks.
-const BATCH_SIZE = 128
+// ⚠️ Batch size is set by the embed function's CPU budget, not by any API.
+// gte-small runs inside the Edge Runtime, and one call that runs too long is
+// killed with 546 WORKER_RESOURCE_LIMIT. 23 Oct: the first Google Drive
+// import (45 chunks of ~1,300 chars) went in one call, hit that, and the
+// whole file was stored with no vectors. Measured then: 4 of the longest
+// chunks take ~1.6-2.1s and pass; 8 can fail.
+const BATCH_SIZE = 4
 
 
 /**
@@ -123,7 +126,26 @@ export async function embedBatch(texts) {
     const batch = texts
       .slice(i, i + BATCH_SIZE)
       .map(t => t.slice(0, MAX_CHARS_PER_INPUT))
-    results.push(...await callEmbedFunction(batch))
+    results.push(...await embedOrSplit(batch))
   }
   return results
+}
+
+/**
+ * One batch, halved and retried while the function runs out of compute, so a
+ * batch of unusually long chunks costs only itself. A single chunk that still
+ * fails comes back null rather than failing the file.
+ */
+async function embedOrSplit(batch) {
+  try {
+    return await callEmbedFunction(batch)
+  } catch (err) {
+    if (!/embed function error 546/.test(err.message)) throw err
+    if (batch.length === 1) {
+      console.warn('[RAG] embed ran out of compute on one chunk; storing it without a vector')
+      return [null]
+    }
+    const mid = Math.ceil(batch.length / 2)
+    return [...await embedOrSplit(batch.slice(0, mid)), ...await embedOrSplit(batch.slice(mid))]
+  }
 }
