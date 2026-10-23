@@ -122,6 +122,11 @@ export async function openGoogleDrivePicker() {
       .addView(view)
       .setOAuthToken(token)
       .setDeveloperKey(GD_API_KEY)
+      // ⚠️ Required with the drive.file scope: picking a file only grants
+      // this app access to it when the picker names the Cloud project, i.e.
+      // the project number, which is the client ID's prefix. Without it the
+      // picker opens fine and the download then 404s.
+      .setAppId(GD_CLIENT_ID.split('-')[0])
       .setTitle('Select documents to import')
       .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED)
       .setCallback((data) => {
