@@ -71,7 +71,7 @@ export default function CloudImportModal({ companyId, userId, onClose, onUploade
       setSelected(files)
       setPhase(PHASE.REVIEW)
     } catch (err) {
-      alert(`Google Drive: ${err.message}`)
+      if (!err.cancelled) alert(`Google Drive: ${err.message}`)
     } finally {
       setBusyMsg(null)
     }
@@ -412,9 +412,13 @@ function OneDriveBrowser({ token, account, onDone, onBack }) {
     return () => clearTimeout(debounceRef.current)
   }, [query, token])
 
+  // ⚠️ Ticks survive moving between folders and tabs: `checked` is keyed by
+  // file id and holds the whole file, so nothing about it is tied to the folder
+  // on screen. 29 Oct, Daniel: every folder meant tick, import, come back in,
+  // go to the next folder. One basket for the whole visit; the review step
+  // lists everything before anything is imported.
   const navigate = (folder) => {
     setStack(s => [...s, { id: folder.id, name: folder.name, driveId: folder.driveId ?? null }])
-    setChecked({})
   }
 
   const switchTab = (t) => {
@@ -424,7 +428,6 @@ function OneDriveBrowser({ token, account, onDone, onBack }) {
       t === 'libraries' ? { id: null, name: 'Company Libraries' } :
                           { id: null, name: 'My Drive' }
     ])
-    setChecked({})
     setListing(null)
     setResults(null)
     setQuery('')
@@ -434,7 +437,6 @@ function OneDriveBrowser({ token, account, onDone, onBack }) {
 
   const openDrive = (drive) => {
     setStack([{ id: null, name: 'Company Libraries' }, { id: null, name: drive.name, driveId: drive.id }])
-    setChecked({})
   }
 
   const goBack = () => {
@@ -473,8 +475,13 @@ function OneDriveBrowser({ token, account, onDone, onBack }) {
 
   const toggleAll = () => {
     if (allSelected) {
-      setChecked({})
-      setCheckedFolders({})
+      // Only what is on screen: picks made in other folders stay picked.
+      const nextFiles = { ...checked }
+      visibleFiles.forEach(f => { delete nextFiles[f.id] })
+      setChecked(nextFiles)
+      const nextFolders = { ...checkedFolders }
+      visibleFolders.forEach(f => { delete nextFolders[f.id] })
+      setCheckedFolders(nextFolders)
     } else {
       const nextFiles = { ...checked }
       visibleFiles.forEach(f => { nextFiles[f.id] = f })
@@ -533,10 +540,7 @@ function OneDriveBrowser({ token, account, onDone, onBack }) {
               <button
                 type="button"
                 onClick={() => {
-                  if (i < stack.length - 1) {
-                    setStack(s => s.slice(0, i + 1))
-                    setChecked({})
-                  }
+                  if (i < stack.length - 1) setStack(s => s.slice(0, i + 1))
                 }}
                 className={`${i === stack.length - 1 ? 'text-ink-900 font-semibold' : 'hover:text-brand-600 transition-colors'}`}
               >

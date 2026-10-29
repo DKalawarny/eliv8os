@@ -90,6 +90,15 @@ export async function getAccessToken() {
         if (response.error) reject(new Error(`Google auth error: ${response.error}`))
         else resolve(response.access_token)
       },
+      // ⚠️ Without this, closing the Google popup (or the browser blocking
+      // it) calls nothing at all, and the caller's spinner waits forever.
+      // 29 Oct: Daniel opened it by accident and sat on "Opening Google
+      // Drive…". A closed popup is a cancel, not an error.
+      error_callback: (err) => {
+        const e = new Error(`Google sign-in ${err?.type === 'popup_failed_to_open' ? 'popup was blocked' : 'was closed'}`)
+        e.cancelled = err?.type === 'popup_closed'
+        reject(e)
+      },
     })
     client.requestAccessToken({ prompt: '' })
   })
