@@ -14,6 +14,13 @@
  * run makes GitHub email the repo owner, so a quiet inbox means all is well.
  * Locally: node scripts/morning-check.mjs
  *
+ * ⭐ IT FIXES WHAT IT SAFELY CAN, THEN LOOKS AGAIN (Daniel, 29 Oct 2026).
+ * Anything that fails gets a second look 10 minutes later, so a slow page or a
+ * blip never wakes anyone. If kinwove itself is down, it first asks Render to
+ * start it again (a deploy hook in the RENDER_KINWOVE_DEPLOY_HOOK secret: it
+ * re-runs what is already live, it cannot change anything). Only what still
+ * fails on the second look fails the run. It never changes code, words or data.
+ *
  * Side effects, deliberately few: opening /demo clones the sample company for
  * a visitor (cleaned up after 6h, same as any visitor). kinwove's Ask box is
  * NOT used, because every question lands in qa_events, the keyword tool.
@@ -24,10 +31,15 @@ import fs from 'node:fs'
 
 const results = []   // { site, check, ok, detail }
 const record = (site, check, ok, detail = '') => {
+  detail = String(detail).replace(/\s+/g, ' ').trim()   // one line, or the table breaks
   results.push({ site, check, ok, detail })
   console.log(`${ok ? '✓' : '✗'} ${site}: ${check}${detail ? ` (${detail})` : ''}`)
 }
-async function attempt(site, check, fn) {
+// Every check is registered first and run later, so a failed one can be run
+// again on the second look.
+const checks = []
+const add = (site, check, fn) => checks.push({ site, check, fn })
+async function attempt({ site, check, fn }) {
   try { const detail = await fn(); record(site, check, true, detail || '') }
   catch (e) { record(site, check, false, e.message) }
 }
@@ -50,8 +62,8 @@ function certDaysLeft(host) {
   })
 }
 
-async function page(site, url, { title, minMs } = {}) {
-  await attempt(site, 'home page loads', async () => {
+function page(site, url, { title, minMs } = {}) {
+  add(site, 'home page loads', async () => {
     const r = await get(url)
     must(r.status === 200, `status ${r.status}`)
     const t = (r.body.match(/<title>([^<]*)/) || [])[1] || ''
@@ -60,8 +72,8 @@ async function page(site, url, { title, minMs } = {}) {
   })
 }
 
-async function sitemap(site, url, min) {
-  await attempt(site, 'sitemap', async () => {
+function sitemap(site, url, min) {
+  add(site, 'sitemap', async () => {
     const r = await get(url)
     must(r.status === 200 && r.type.includes('xml'), `status ${r.status}, ${r.type}`)
     // Only "is it there and whole". Missing dates and the like are tidiness,
@@ -72,8 +84,8 @@ async function sitemap(site, url, min) {
   })
 }
 
-async function cert(site, host) {
-  await attempt(site, 'security certificate', async () => {
+function cert(site, host) {
+  add(site, 'security certificate', async () => {
     const days = await certDaysLeft(host)
     must(days >= 14, `expires in ${days} days`)
     return `${days} days left`
@@ -90,10 +102,10 @@ const text = p => p.evaluate(() => document.body.innerText)
 const wait = ms => new Promise(r => setTimeout(r, ms))
 
 // ── Eliv8 OS ────────────────────────────────────────────────────────────────
-await page('Eliv8', 'https://eliv8os.com/', { title: 'Eliv8' })
-await sitemap('Eliv8', 'https://eliv8os.com/sitemap.xml', 70)
-await cert('Eliv8', 'eliv8os.com')
-await attempt('Eliv8', 'live demo opens with no account', () => inBrowser(async p => {
+page('Eliv8', 'https://eliv8os.com/', { title: 'Eliv8' })
+sitemap('Eliv8', 'https://eliv8os.com/sitemap.xml', 70)
+cert('Eliv8', 'eliv8os.com')
+add('Eliv8', 'live demo opens with no account', () => inBrowser(async p => {
   await p.goto('https://eliv8os.com/demo', { waitUntil: 'networkidle2', timeout: 60000 })
   for (let i = 0; i < 20 && !p.url().includes('/dashboard'); i++) await wait(1000)
   await wait(4000)
@@ -104,10 +116,10 @@ await attempt('Eliv8', 'live demo opens with no account', () => inBrowser(async 
 }))
 
 // ── Unstuck Map ─────────────────────────────────────────────────────────────
-await page('Unstuck', 'https://getunstuckmap.com/', { title: 'Unstuck Map' })
-await sitemap('Unstuck', 'https://getunstuckmap.com/sitemap.xml', 50)
-await cert('Unstuck', 'getunstuckmap.com')
-await attempt('Unstuck', 'six taps give a result', () => inBrowser(async p => {
+page('Unstuck', 'https://getunstuckmap.com/', { title: 'Unstuck Map' })
+sitemap('Unstuck', 'https://getunstuckmap.com/sitemap.xml', 50)
+cert('Unstuck', 'getunstuckmap.com')
+add('Unstuck', 'six taps give a result', () => inBrowser(async p => {
   await p.goto('https://getunstuckmap.com/start', { waitUntil: 'networkidle2', timeout: 60000 })
   for (let i = 0; i < 10; i++) {
     await wait(900)
@@ -129,25 +141,56 @@ await attempt('Unstuck', 'six taps give a result', () => inBrowser(async p => {
 }))
 
 // ── kinwove ─────────────────────────────────────────────────────────────────
-await page('kinwove', 'https://www.kinwove.com/', { title: 'kinwove' })
-await attempt('kinwove', 'server health', async () => {
+page('kinwove', 'https://www.kinwove.com/', { title: 'kinwove' })
+add('kinwove', 'server health', async () => {
   const r = await get('https://www.kinwove.com/api/health')
   must(r.status === 200 && /"ok":\s*true/.test(r.body), `status ${r.status}: ${r.body.slice(0, 80)}`)
 })
-await sitemap('kinwove', 'https://www.kinwove.com/sitemap.xml', 20)
-await cert('kinwove', 'www.kinwove.com')
-await attempt('kinwove', 'ask box shows', () => inBrowser(async p => {
+sitemap('kinwove', 'https://www.kinwove.com/sitemap.xml', 20)
+cert('kinwove', 'www.kinwove.com')
+add('kinwove', 'ask box shows', () => inBrowser(async p => {
   await p.goto('https://www.kinwove.com/', { waitUntil: 'networkidle2', timeout: 60000 })
   await wait(2000)
   must(await p.$('input[placeholder*="Ask anything"]'), 'the Ask box is not on the page')
 }))
 
+// ── first look ──────────────────────────────────────────────────────────────
+for (const c of checks) await attempt(c)
+const firstFails = results.filter(r => !r.ok)
+const notes = []
+
+// ── fix what is safe to fix, then the second look ───────────────────────────
+if (firstFails.length) {
+  const kinwoveDown = firstFails.some(r => r.site === 'kinwove' && /home page|server health/.test(r.check))
+  const hook = process.env.RENDER_KINWOVE_DEPLOY_HOOK
+  if (kinwoveDown && hook) {
+    try {
+      const r = await fetch(hook, { method: 'POST', signal: AbortSignal.timeout(30000) })
+      notes.push(`kinwove was down, so Render was asked to start it again (${r.status})`)
+    } catch (e) { notes.push(`kinwove was down, and asking Render to start it again failed (${e.message})`) }
+  } else if (kinwoveDown) notes.push('kinwove was down; no restart, RENDER_KINWOVE_DEPLOY_HOOK is not set')
+  notes.forEach(n => console.log(`↻ ${n}`))
+
+  const mins = Number(process.env.RECHECK_MIN ?? 10)
+  console.log(`\n${firstFails.length} failed, looking again in ${mins} min`)
+  await wait(mins * 60 * 1000)
+  const again = checks.filter(c => firstFails.some(f => f.site === c.site && f.check === c.check))
+  for (const c of again) {
+    results.splice(results.findIndex(r => r.site === c.site && r.check === c.check), 1)
+    await attempt(c)
+  }
+}
+
 await browser.close()
 
 // ── report ──────────────────────────────────────────────────────────────────
 const failed = results.filter(r => !r.ok)
+const recovered = firstFails.filter(f => !failed.some(r => r.site === f.site && r.check === f.check))
 const lines = [
   `# Morning check: ${failed.length ? `${failed.length} problem${failed.length > 1 ? 's' : ''}` : 'all good'}`,
+  '',
+  ...notes.map(n => `- ${n}`),
+  ...recovered.map(r => `- ${r.site}: ${r.check} failed at first (${r.detail}) and passed on the second look`),
   '',
   '| Site | Check | Result |', '|---|---|---|',
   ...results.map(r => `| ${r.site} | ${r.check} | ${r.ok ? '✅' : '🔴'} ${r.detail} |`),

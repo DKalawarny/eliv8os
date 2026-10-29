@@ -5,7 +5,9 @@
 # quiet inbox means everything works. Each run's page (Actions tab) shows the
 # full table of what was checked.
 #
-# Needs no secrets: it only reads public pages.
+# One optional secret, RENDER_KINWOVE_DEPLOY_HOOK: Render's deploy hook link
+# for kinwove, so a kinwove that is down gets started again before the second
+# look. Without it the check still runs; it just cannot restart kinwove.
 
 name: Morning check
 
@@ -18,7 +20,7 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,3 +31,5 @@ jobs:
       # own Chrome) as the Mac. Cached, so about a minute.
       - run: npm ci
       - run: node scripts/morning-check.mjs
+        env:
+          RENDER_KINWOVE_DEPLOY_HOOK: ${{ secrets.RENDER_KINWOVE_DEPLOY_HOOK }}

@@ -14,7 +14,7 @@
 // ⚠️ These files hold personal data. They stay on this Mac; never commit them.
 //
 // Run by ~/Library/LaunchAgents/com.eliv8.backup.plist each morning.
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
@@ -23,6 +23,9 @@ const REPO = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const SUPABASE = fs.existsSync('/opt/homebrew/bin/supabase') ? '/opt/homebrew/bin/supabase' : 'supabase'
 const ROOT = path.join(os.homedir(), 'eliv8-backups')
 const KEEP_DAYS = 30
+// ⭐ A run that fails tries once more an hour later (Daniel, 29 Oct 2026), as
+// a fresh copy of this script; only the second failure is final.
+const RETRY_MIN = 60
 const stamp = () => new Date().toISOString().replace('T', ' ').slice(0, 19)
 
 function query(sql) {
@@ -50,8 +53,15 @@ fs.mkdirSync(dir, { recursive: true })
 console.log(`===== ${stamp()}  eliv8/unstuck data → ${dir} =====`)
 
 let failed = 0
-const tables = query(`select table_name from information_schema.tables
-  where table_schema = 'public' and table_type = 'BASE TABLE' order by 1`).map(r => r.table_name)
+let tables = []
+try {
+  tables = queryWithRetry(`select table_name from information_schema.tables
+    where table_schema = 'public' and table_type = 'BASE TABLE' order by 1`).map(r => r.table_name)
+} catch (e) {
+  // No list means no backup at all; count it so the hour-later retry runs.
+  failed++
+  console.error(`!! table list FAILED: ${String(e?.stderr ?? e?.message ?? e).slice(0, 200)}`)
+}
 
 // ⚠️ The CLI occasionally fails a single query while it re-initialises its
 // login role (4 Oct: `checkins` FAILED with only "Initialising login role…").
@@ -74,12 +84,22 @@ for (const t of tables) {
   }
 }
 
-// Keep the newest KEEP_DAYS folders.
-const folders = fs.readdirSync(ROOT).filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f)).sort()
+// Keep the newest KEEP_DAYS folders, cleaning up only after a run that
+// worked, so days of failed (empty) folders can never push out the good ones.
+const folders = failed ? [] : fs.readdirSync(ROOT).filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f)).sort()
 for (const old of folders.slice(0, Math.max(0, folders.length - KEEP_DAYS))) {
   fs.rmSync(path.join(ROOT, old), { recursive: true, force: true })
   console.log(`  pruned ${old}`)
 }
 
-console.log(`===== ${stamp()}  done: ${tables.length - failed}/${tables.length} tables (exit ${failed ? 1 : 0}) =====`)
+console.log(`===== ${stamp()}  done: ${tables.length ? `${tables.length - failed}/${tables.length} tables` : 'no table list'} (exit ${failed ? 1 : 0}) =====`)
 process.exitCode = failed ? 1 : 0
+
+if (failed && !process.env.BACKUP_RETRY) {
+  console.log(`===== ${stamp()}  trying again in ${RETRY_MIN} min =====`)
+  await new Promise(r => setTimeout(r, RETRY_MIN * 60 * 1000))
+  const again = spawnSync(process.execPath, [new URL(import.meta.url).pathname], {
+    stdio: 'inherit', env: { ...process.env, BACKUP_RETRY: '1' },
+  })
+  process.exitCode = again.status ?? 1
+}
