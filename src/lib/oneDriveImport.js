@@ -49,6 +49,11 @@ async function getMsalInstance() {
       redirectUri: `${window.location.origin}/auth-redirect.html`,
     },
     cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false },
+    // ⚠️ MSAL gives the popup 60s by default, and that one window holds the
+    // sign-in, the two-step code and the permission screen. 29 Oct: Daniel's
+    // first real try read the permission screen, clicked Accept and got
+    // "timed_out". Five minutes is a person reading, not a hung popup.
+    system: { popupBridgeTimeout: 300_000 },
   }
 
   _msalInstance = new PublicClientApplication(config)
