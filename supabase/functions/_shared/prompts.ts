@@ -5542,7 +5542,20 @@ Every step is open from the start, in every move, and can be done in any order.
 without them: you cannot ask for the pay meeting before you have written your
 examples; you cannot check that the card balance went down before anything was
 paid onto it. A step that would merely go BETTER after another one does not need
-it. Most steps need nothing. A need may only point to a step listed BEFORE it.
+it. A need may only point to a step listed BEFORE it.
+
+🔴 THE FIRST REAL PATH BLOCKED 9 OF 13 STEPS, which is the opposite of what he
+asked for. Ask of every need: "could they physically do this step today without
+the other one?" If yes, it does not need it.
+  ❌ "Call your phone provider" needs "Write down every bill". They can call
+     today; the list only makes the call better.
+  ❌ "Cancel unused subscriptions" needs "Write down every bill". They know
+     what they don't use.
+  ❌ "Set a day each week to move the money to the card" needs "Put every
+     payment in the account". They can pick the day now.
+  ✅ "In the meeting, name one of your examples" needs "Book the meeting".
+  ✅ "Move the detail money onto the card" needs "Open the account".
+⚠️ At least two thirds of the steps need nothing, and none needs more than one.
 
 ⚠️ "wait" is for a step that cannot happen until time has passed ("check the
 card balance in two months"). Give the days and the words: { "days": 60, "label":

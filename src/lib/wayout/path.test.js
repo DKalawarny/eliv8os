@@ -45,6 +45,13 @@ describe('enforcePathContract', () => {
     expect(p.parts[0].steps[1].needs).toEqual(['1.1'])
   })
 
+  it('lets a step wait on one other step at most, the nearest', () => {
+    const p = enforcePathContract({ parts: [{ move: 1, steps: [
+      { id: 'a', title: 'A' }, { id: 'b', title: 'B' }, { id: 'c', title: 'C', needs: ['a', 'b'] },
+    ] }] }, { moves: [{ title: 'M' }] })
+    expect(p.parts[0].steps[2].needs).toEqual(['1.2'])
+  })
+
   it('cuts a figure that is not theirs and keeps one that is', () => {
     const p = enforcePathContract({ parts: [{ move: 1, steps: [
       { title: 'Ask for the rate', why: 'That would save you $4,750 a year. Phone plans are often too high.' },

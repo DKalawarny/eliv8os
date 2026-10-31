@@ -83,7 +83,9 @@ export function enforcePathContract(raw, map, answers = {}) {
         title,
         why: text(s?.why, answers),
         minutes: minutesOf(s?.minutes),
-        needs: [...new Set(needs)],
+        // ⚠️ One need at most, the nearest one: the first real path chained
+        // steps behind two or three others and blocked 9 of 13 at the start.
+        needs: [...new Set(needs)].slice(-1),
         wait: days >= 1 && days <= 365 ? { days, label: text(s.wait.label, answers) || `in ${days} days` } : null,
         money: s?.money === true,
         alt: altTitle ? { title: altTitle, why: text(s.alt.why, answers), minutes: minutesOf(s.alt.minutes) } : null,
