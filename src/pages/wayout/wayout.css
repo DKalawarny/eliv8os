@@ -3577,7 +3577,7 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
 .wayout__ptrail-svg path.is-lit { stroke: var(--p-green); stroke-dasharray: none; }
 
 .wayout__ppart { position: relative; }
-.wayout__psign { position: relative; margin: 18px auto 10px; max-width: 300px; text-align: center; background: var(--c); color: #fff;
+.wayout__psign { position: relative; margin: 18px auto 30px; max-width: 300px; text-align: center; background: var(--c); color: #fff;
   padding: 12px 18px 14px; border-radius: 16px; transform: rotate(-1.5deg); box-shadow: 0 6px 0 var(--cd); }
 .wayout__psign b { display: block; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; opacity: .85; }
 .wayout__psign span { display: block; font-weight: 900; font-size: 17px; line-height: 1.25; }
@@ -3663,6 +3663,23 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
 .wayout__pcheer { font-size: 26px !important; }
 .wayout__pbig { font-size: 40px; font-weight: 900; letter-spacing: -.02em; color: var(--p-green); font-variant-numeric: tabular-nums; }
 .wayout__pconfetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
+
+/* Phone: one column, the two wrappers are not boxes at all. */
+.wayout__pside, .wayout__pmain { display: contents; }
+.wayout__precord.is-side { display: none; }
+
+@media (min-width: 1040px) {
+  .wayout__path { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 64px; align-items: start; }
+  .wayout__pside { display: block; position: sticky; top: 28px; }
+  .wayout__pmain { display: block; max-width: 620px; width: 100%; margin: 0 auto; }
+  .wayout__pgap { position: static; }
+  .wayout__ptitle { font-size: 40px; margin-top: 28px; }
+  .wayout__plede { font-size: 18px; }
+  .wayout__precord.is-side { display: block; margin-top: 22px; }
+  .wayout__precord.is-main { display: none; }
+  .wayout__prow { height: 116px; }
+  .wayout__pstep { font-size: 16px; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .wayout__pnode.is-now, .wayout__pburst { animation: none; }

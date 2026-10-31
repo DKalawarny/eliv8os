@@ -119,7 +119,7 @@ export default function Path() {
   }
 
   return (
-    <WayoutShell title="Your path">
+    <WayoutShell title="Your path" wide>
       <PathView
         path={path}
         state={state}
@@ -225,6 +225,10 @@ export function PathView({ path, state, headline = '', gap = null, onState, move
 
   return (
     <div className="wayout__path">
+      {/* ⭐ Desktop: the money and where you are on the left, sticky; the path
+          on the right (Daniel: "layout isn't right for desktop"). On a phone
+          both wrappers are display: contents, one column as before. */}
+      <aside className="wayout__pside">
       <div className="wayout__pgap" aria-live="polite">
         {gap ? (
           <>
@@ -248,6 +252,14 @@ export function PathView({ path, state, headline = '', gap = null, onState, move
         Start with the glowing step, or tap any coloured one and do them in any order.
         Grey ones need another step first.
       </p>
+      <p className="wayout__precord is-side">
+        <b>What you have done:</b> {doneCount} of {steps.length} steps.
+        {waitingCount ? ` ${waitingCount} set for later.` : ''}
+        {saved ? <> <b>{money(saved)} a month</b> back, {money(saved * 12)} a year.</> : ''}
+      </p>
+      </aside>
+
+      <div className="wayout__pmain">
 
       <div className="wayout__ptrail" ref={trail}>
         <svg className="wayout__ptrail-svg" aria-hidden="true">
@@ -324,11 +336,12 @@ export function PathView({ path, state, headline = '', gap = null, onState, move
         </div>
       )}
 
-      <p className="wayout__precord">
+      <p className="wayout__precord is-main">
         <b>What you have done:</b> {doneCount} of {steps.length} steps.
         {waitingCount ? ` ${waitingCount} set for later.` : ''}
         {saved ? <> <b>{money(saved)} a month</b> back, {money(saved * 12)} a year.</> : ''}
       </p>
+      </div>
 
       {sheet && (
         <Sheet onClose={close}>
