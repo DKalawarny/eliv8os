@@ -3673,7 +3673,10 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
   .wayout__pside { display: block; position: sticky; top: 28px; }
   .wayout__pmain { display: block; max-width: 620px; width: 100%; margin: 0 auto; }
   .wayout__pgap { position: static; }
-  .wayout__ptitle { font-size: 40px; margin-top: 28px; }
+  .wayout__ptitle { font-size: 40px; margin-top: 30px; }
+  .wayout__pside > :first-child { margin-top: 0; }
+  .wayout__pmain .wayout__ptrail { margin-top: 0; }
+  .wayout__ptrail > .wayout__ppart:first-of-type .wayout__psign { margin-top: 0; }
   .wayout__plede { font-size: 18px; }
   .wayout__precord.is-side { display: block; margin-top: 22px; }
   .wayout__precord.is-main { display: none; }
@@ -3685,3 +3688,8 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
   .wayout__pnode.is-now, .wayout__pburst { animation: none; }
   .wayout__psheet, .wayout__pscrim, .wayout__pbar i { transition: none; }
 }
+/* ⚠️ A broader wayout heading rule zeroed the title's top margin, so "Your
+   path" sat touching the money box. Doubled class to win without !important. */
+.wayout__path .wayout__ptitle { margin-top: 28px; }
+.wayout__path .wayout__pside > .wayout__ptitle:first-child { margin-top: 0; }
+@media (min-width: 1040px) { .wayout__path .wayout__ptitle { margin-top: 36px; } }

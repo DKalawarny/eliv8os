@@ -137,7 +137,10 @@ export default function Path() {
 // ── The path itself ─────────────────────────────────────────────────────────
 
 const DONE_STATES = new Set(['done', 'tried'])
-const X = [50, 68, 74, 60, 38, 26, 34, 54, 70, 64, 46, 30, 50, 68, 74]
+// ⚠️ An even swing either side of the centre line, like a path up a hill. The
+// first version leaned right (50, 68, 74, 60…) and drifted off the part signs,
+// which sit in the middle (Daniel: "this needs alignment").
+const X = [50, 62, 68, 62, 50, 38, 32, 38]
 const PART_COLOURS = ['amber', 'coral', 'sky']
 const money = n => `$${Number(n).toLocaleString('en-US')}`
 
@@ -229,7 +232,12 @@ export function PathView({ path, state, headline = '', gap = null, onState, move
           on the right (Daniel: "layout isn't right for desktop"). On a phone
           both wrappers are display: contents, one column as before. */}
       <aside className="wayout__pside">
-      <div className="wayout__pgap" aria-live="polite">
+      {/* ⭐ ONLY WHEN MONEY IS PART OF IT (Daniel: "the money thing doesn't
+          necessarily apply to every type of person"). A plan about land, a
+          visa or a move has no monthly gap, and a "$0/mo" box there is noise.
+          It appears when the plan names a monthly gap, or the first time they
+          record money back. */}
+      {(gap || saved > 0) && <div className="wayout__pgap" aria-live="polite">
         {gap ? (
           <>
             <div className="wayout__pgap-top">
@@ -245,7 +253,7 @@ export function PathView({ path, state, headline = '', gap = null, onState, move
             <b className={saved ? 'is-closed' : ''}>{money(saved)}<small>/mo</small></b>
           </div>
         )}
-      </div>
+      </div>}
 
       <h1 className="wayout__ptitle">Your path</h1>
       <p className="wayout__plede">

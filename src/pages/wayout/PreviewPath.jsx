@@ -41,9 +41,11 @@ const PATH = enforcePathContract(RAW, MAP, ANSWERS)
 
 export default function PreviewPath() {
   const [state, setState] = useState({ '1.1': { s: 'done' } })
+  // ?nogap shows a plan with no monthly gap (the money box should not appear).
+  const gap = new URLSearchParams(window.location.search).has('nogap') ? null : 300
   return (
     <WayoutShell title="Your path (preview)" wide>
-      <PathView path={PATH} state={state} headline={MAP.headline} gap={300} onState={next => setState(next)} moveLink={null} />
+      <PathView path={PATH} state={state} headline={MAP.headline} gap={gap} onState={next => setState(next)} moveLink={null} />
     </WayoutShell>
   )
 }

@@ -29,4 +29,8 @@ describe('the end of the path', () => {
     const t = html({ '1.1': { s: 'done', saved: 300 }, '1.2': { s: 'done' } })
     expect(t).toMatch(/The \$300 gap is closed\./)
   })
+  it('shows no money box when the plan has no monthly gap and nothing is saved yet', () => {
+    expect(html({}, null)).not.toMatch(/Back each month|Still short/)
+    expect(html({ '1.1': { s: 'done', saved: 40 } }, null)).toMatch(/Back each month so far \$40/)
+  })
 })
