@@ -1041,7 +1041,9 @@ price; `brand.js` now owns the time promise.
 1. **Payments.** `WAYOUT_PAYMENTS_LIVE = false`. Needs a live Stripe
    **RECURRING** price at $29, its id in `STRIPE_PRICE_ID_WAYOUT`, a `wayout`
    branch in `stripe-webhook` setting `status='paid'`, and **migration 055
-   reverted in the same commit** — a paywall appearing while the button still
+   reverted in the same commit** (⭐ and the path guard in **102**, same one-line
+   change; the path's prompt is `WAYOUT_PLAYBOOK_PATH_PROMPT` so the claude
+   function's paid check already covers it) — a paywall appearing while the button still
    says free is worse than either state alone. ⚠️ Stripe is still in TEST mode.
 2. ✅ **Name done.** Remaining from that chain: DNS at GoDaddy → Resend
    verification → `WAYOUT_EMAIL_FROM` (check-ins cannot send until then), terms
