@@ -135,6 +135,7 @@ export default function Path() {
 
 // ── The path itself ─────────────────────────────────────────────────────────
 
+const DONE_STATES = new Set(['done', 'tried'])
 const X = [50, 68, 74, 60, 38, 26, 34, 54, 70, 64, 46, 30, 50, 68, 74]
 const PART_COLOURS = ['amber', 'coral', 'sky']
 const money = n => `$${Number(n).toLocaleString('en-US')}`
@@ -322,7 +323,6 @@ export function PathView({ path, state, headline = '', gap = null, onState, move
   )
 }
 
-const DONE_STATES = new Set(['done', 'tried'])
 
 function Sheet({ children, onClose }) {
   const [on, setOn] = useState(false)
