@@ -32,20 +32,13 @@ describe('a crisis answer is allowed to break the format', () => {
   })
 })
 
-describe('the gate is the product', () => {
-  it('move one is always open', () => {
+describe('no move is ever locked (Daniel, 31 Oct 2026)', () => {
+  // ⭐ He chose this over 056's "the gate is the product": never block somebody
+  // unless a thing truly has to come first. Single steps can still need one
+  // another; that lives in path.js and is tested there.
+  it('every move is open, whatever is done', () => {
     expect(moveIsOpen(1, new Set())).toBe(true)
-  })
-
-  it('move two opens only when move one is done', () => {
-    expect(moveIsOpen(2, new Set())).toBe(false)
-    expect(moveIsOpen(2, new Set([1]))).toBe(true)
-  })
-
-  it('does not let move three open just because move one is done', () => {
-    // 🔴 The whole promise is the ORDER. Skipping the middle is the pile of
-    // ideas this product exists not to be.
-    expect(moveIsOpen(3, new Set([1]))).toBe(false)
-    expect(moveIsOpen(3, new Set([1, 2]))).toBe(true)
+    expect(moveIsOpen(2, new Set())).toBe(true)
+    expect(moveIsOpen(3, new Set([1]))).toBe(true)
   })
 })

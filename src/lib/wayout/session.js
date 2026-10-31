@@ -4,6 +4,7 @@ import { movesLibraryForPrompt } from '../../content/wayoutMoves'
 import { readingForPrompt } from '../../content/wayoutReading'
 import { enforceMapContract, enforcePlaybookContract, scrubFigures, mapProblems, mapStyleNotes, forReaders } from './mapContract'
 import { parseModelJson } from './parseModelJson'
+import { enforcePathContract } from './path'
 import { readReplyJson, soundsLikeCrisis } from './replyJson'
 import { loadDraft, clearDraft, stampDraft, draftBelongsToSomeoneElse, takeHandoff } from './draft'
 import { historyForPrompt, chapterAnswers } from './chapterHistory'
@@ -1169,24 +1170,46 @@ export async function loadProgress(sessionId) {
  * does not have to be the one to say so.
  */
 export async function markMoveDone(sessionId, moveOrder, done = true) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('wayout_playbooks')
     .update({ done_at: done ? new Date().toISOString() : null })
     .eq('session_id', sessionId)
     .eq('move_order', moveOrder)
+    .select('id')
   if (error) throw new Error(error.message)
+  if (data?.length || !done) return
+
+  // 🔴 FOUND 31 Oct 2026: a move ticked on the plan before its walkthrough was
+  // ever opened has no playbook row yet, so the update above changed nothing,
+  // raised nothing, and the tick was gone on the next load. The row is made
+  // here instead, with the move as it stands (the same snapshot savePlaybook
+  // keeps), and no play.
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Signed out.')
+  const { data: s, error: e2 } = await supabase
+    .from('wayout_sessions').select('map').eq('id', sessionId).maybeSingle()
+  if (e2) throw new Error(e2.message)
+  const move = s?.map?.moves?.[moveOrder - 1]
+  if (!move) return
+  const { error: e3 } = await supabase
+    .from('wayout_playbooks')
+    .insert({ user_id: user.id, session_id: sessionId, move_order: moveOrder, move, done_at: new Date().toISOString() })
+  if (e3) throw new Error(e3.message)
 }
 
 /**
  * Can they open the play-by-play for this move yet?
  *
- * ⭐ The gate is the product. Move one is always open. Anything after it opens
- * when the move before it is done — which is exactly what the plan already
- * promises in writing under every move, and until now nothing enforced.
+ * ⭐⭐ YES, ALWAYS (Daniel, 31 Oct 2026): "I don't think we should ever block
+ * someone unless it has to be done before they can go on." This used to open
+ * move N only once move N-1 was ticked (056: "the gate is the product"). He
+ * chose otherwise: every move is open, the plan's order stays as the suggested
+ * order ("You are here"), and the path (lib/wayout/path.js) blocks a single
+ * STEP only when it truly needs another one first. Kept as a function so the
+ * one rule has one home if it ever changes again.
  */
-export function moveIsOpen(order, done) {
-  if (order <= 1) return true
-  return done.has(order - 1)
+export function moveIsOpen(_order, _done) {
+  return true
 }
 
 /** Did the plan change under a play we already wrote? */
@@ -1207,6 +1230,58 @@ export function playbookIsStale(stored, currentMove) {
   if ((stored.rules_version ?? 0) < WAYOUT_PLAYBOOK_RULES) return true
   if (!stored.move || !currentMove) return false
   return String(stored.move.title ?? '').trim() !== String(currentMove.title ?? '').trim()
+}
+
+// ── The path ────────────────────────────────────────────────────────────────
+
+/**
+ * ⭐ The whole plan as small steps, written in one call (see lib/wayout/path.js
+ * for what a step is and why nothing blocks). Sonnet, like the walkthrough: it
+ * is the paid half and the steps are what somebody actually does.
+ *
+ * ⚠️ Their move notes ride in with their answers, so a figure they typed about
+ * a move counts as theirs for the figure guard, same as generateMap.
+ */
+export async function generatePath(session) {
+  const answers = enrichAnswers(session.answers ?? {}, session.move_notes ?? null)
+  const raw = await callClaude({
+    promptKey: 'WAYOUT_PLAYBOOK_PATH_PROMPT',
+    messages: [{
+      role: 'user',
+      content: JSON.stringify({
+        answers,
+        the_plan: { headline: session.map?.headline, moves: session.map?.moves, cut: session.map?.cut },
+      }, null, 2),
+    }],
+    maxTokens: 4000,
+    json: true,
+    model: SONNET,
+    temperature: 0,
+    toolId: TOOL_ID,
+    kind: 'path',
+  })
+  const crisis = crisisFrom(raw)
+  if (crisis) return crisis
+  return enforcePathContract(parseModelJson(raw, 'The path'), session.map, answers)
+}
+
+export async function savePath(sessionId, path) {
+  // ⚠️ A new path starts with no taps: the old ones were for steps that no
+  // longer exist, and step ids are reused ("1.2"), so keeping them would tick
+  // the wrong things.
+  const { error } = await supabase
+    .from('wayout_sessions')
+    .update({ path, path_state: {} })
+    .eq('id', sessionId)
+  if (error) throw new Error(error.message)
+}
+
+export async function savePathState(sessionId, state) {
+  const { error } = await supabase
+    .from('wayout_sessions')
+    .update({ path_state: state })
+    .eq('id', sessionId)
+  if (error) throw new Error(error.message)
 }
 
 // ── What happened ───────────────────────────────────────────────────────────

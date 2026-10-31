@@ -1,0 +1,645 @@
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import WayoutShell from './WayoutShell'
+import Working from './Working'
+import CrisisHelp from './CrisisHelp'
+import { WAYOUT_BASE } from '../../lib/wayout/brand'
+import {
+  loadOrCreateSession, generatePath, savePath, savePathState, markMoveDone,
+} from '../../lib/wayout/session'
+import {
+  pathIsStale, allSteps, currentStep, stepStatus, blockedBy, savedPerMonth, monthlyGap,
+  parseAmount, partIsFinished, untilFor, cheer, pickFresh, DONE_LINES,
+} from '../../lib/wayout/path'
+import { tick, buzz } from '../../lib/wayout/feedback'
+import { humanError } from '../../lib/wayout/humanError'
+
+/**
+ * ⭐⭐ THE PATH (Daniel, 31 Oct 2026). The plan's three moves as small steps,
+ * tapped through like a game. Built from the mock-up he went through step by
+ * step; every behaviour below is one of his notes:
+ *   · bright, with energy ("it looks too dark, it needs to have energy")
+ *   · type your own amount ("an option to put in your own numbers")
+ *   · "It didn't work" always lets you move on ("some things can't budge")
+ *   · a step that waits for a date parks itself and never blocks
+ *   · the congratulations change ("so it's not all the same")
+ *   · nothing blocks unless it has to be done first
+ * The rules themselves are in lib/wayout/path.js, where they are tested.
+ *
+ * ⚠️ The paid half, like the walkthrough. Free while payments are off (102).
+ */
+export default function Path() {
+  const navigate = useNavigate()
+  const [session, setSession] = useState(null)
+  const [path, setPath] = useState(null)
+  const [state, setState] = useState({})
+  const [working, setWorking] = useState(false)
+  const [error, setError] = useState('')
+  const busy = useRef(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function go() {
+      try {
+        const s = await loadOrCreateSession()
+        if (cancelled) return
+        if (!s.map?.moves?.length) { navigate(`${WAYOUT_BASE}/plan`, { replace: true }); return }
+        setSession(s)
+        if (s.path && !pathIsStale(s.path, s.map)) {
+          setPath(s.path)
+          setState(s.path_state ?? {})
+          return
+        }
+        // Same guard as the plan page: in dev the effect runs twice, and
+        // without this both runs reach the model.
+        if (busy.current) return
+        busy.current = true
+        setWorking(true)
+        const written = await generatePath(s)
+        if (cancelled) return
+        if (!written?.crisis) await savePath(s.id, written)
+        setPath(written)
+        setState({})
+      } catch (err) {
+        if (!cancelled) setError(humanError(err) || 'That did not come through. Try again in a moment.')
+      } finally {
+        if (!cancelled) setWorking(false)
+      }
+    }
+    go()
+    return () => { cancelled = true }
+  }, [navigate])
+
+  const onState = useCallback(async (next, finishedMove) => {
+    setState(next)
+    try {
+      await savePathState(session.id, next)
+      // ⭐ A finished part ticks its move, so the plan page, the "how did it
+      // go" page and the check-in emails all see it.
+      if (finishedMove) await markMoveDone(session.id, finishedMove, true)
+    } catch (err) {
+      setError(humanError(err) || 'That did not save. Check your connection and try again.')
+    }
+  }, [session])
+
+  if (error && !path) {
+    return (
+      <WayoutShell title="Your path">
+        <p className="wayout__lead">{error}</p>
+        <Link className="wayout__btn wayout__btn--sun" to={`${WAYOUT_BASE}/plan`}>Back to the plan</Link>
+      </WayoutShell>
+    )
+  }
+
+  if (working || !path) {
+    return (
+      <WayoutShell title="Your path">
+        <Working lines={[
+          'Reading your plan',
+          'Breaking each move into small steps',
+          'Working out what can be done today',
+          'Laying out your path',
+        ]} />
+      </WayoutShell>
+    )
+  }
+
+  if (path.crisis) {
+    return (
+      <WayoutShell title="Read this first">
+        <div className="wayout__crisis">
+          {String(path.message).replace(/\*\*/g, '').split(/\n{2,}/).filter(Boolean).map((p, i) => (
+            <p key={i} className={i === 0 ? 'wayout__q' : 'wayout__lead'}>{p.trim()}</p>
+          ))}
+        </div>
+        <CrisisHelp region={session?.answers?.region} />
+      </WayoutShell>
+    )
+  }
+
+  return (
+    <WayoutShell title="Your path">
+      <PathView
+        path={path}
+        state={state}
+        headline={session?.map?.headline}
+        gap={monthlyGap(session?.map)}
+        onState={onState}
+        moveLink={move => `${WAYOUT_BASE}/play/${move}`}
+      />
+      {error && <p className="wayout__path-err" role="alert">{error}</p>}
+    </WayoutShell>
+  )
+}
+
+// ── The path itself ─────────────────────────────────────────────────────────
+
+const X = [50, 68, 74, 60, 38, 26, 34, 54, 70, 64, 46, 30, 50, 68, 74]
+const PART_COLOURS = ['amber', 'coral', 'sky']
+const money = n => `$${Number(n).toLocaleString('en-US')}`
+
+const Check = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+)
+const Arrow = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+)
+const Clock = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>
+)
+const Star = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.8l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 16.8l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" /></svg>
+)
+const Coin = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M14.6 9.2c-.5-.8-1.5-1.2-2.6-1.2-1.5 0-2.6.8-2.6 2s1.1 1.6 2.6 2 2.7.8 2.7 2-1.2 2-2.7 2c-1.2 0-2.2-.5-2.7-1.3M12 6.5V8M12 16v1.5" /></svg>
+)
+// The badge on the win changes each time, with the words.
+const BADGES = [
+  { kind: 'check', tone: 'green' }, { kind: 'star', tone: 'amber' }, { kind: 'coin', tone: 'sky' }, { kind: 'check', tone: 'coral' },
+]
+const Badge = ({ kind }) => (kind === 'star' ? <Star /> : kind === 'coin' ? <Coin /> : <Check />)
+
+/**
+ * The path, drawn from `path` and `state`. Reports every change through
+ * `onState(nextState, finishedMove)`; owns nothing that has to persist, so the
+ * dev preview can drive it with sample data and no database.
+ */
+export function PathView({ path, state, headline = '', gap = null, onState, moveLink = null, now: nowProp = null }) {
+  const [sheet, setSheet] = useState(null)        // { step, view, ... }
+  const [lastUsed, setLastUsed] = useState({})
+  const trail = useRef(null)
+  const [segs, setSegs] = useState([])
+  const now = nowProp ?? new Date()
+
+  const steps = allSteps(path)
+  const today = currentStep(path, state, now)
+  const saved = savedPerMonth(state)
+  const left = gap ? Math.max(0, gap - saved) : null
+  const doneCount = steps.filter(s => ['done', 'tried'].includes(state[s.id]?.s)).length
+  const waitingCount = steps.filter(s => stepStatus(path, state, s, now) === 'parked').length
+
+  // Draw the trail between the node centres once they are laid out.
+  const measure = useCallback(() => {
+    const box = trail.current?.getBoundingClientRect()
+    if (!box) return
+    const pts = [...trail.current.querySelectorAll('.wayout__pnode')].map(n => {
+      const r = n.getBoundingClientRect()
+      return [r.left + r.width / 2 - box.left, r.top + r.height / 2 - box.top]
+    })
+    setSegs(pts.slice(1).map((p, k) => ({ a: pts[k], b: p, id: steps[k + 1]?.id })))
+  }, [steps.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => { measure() }, [measure, state])
+  useEffect(() => {
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [measure])
+
+  const close = () => setSheet(null)
+  const open = (step, view = null) => {
+    const status = stepStatus(path, state, step, now)
+    setSheet({ step, view: view ?? (status === 'blocked' ? 'blocked' : status === 'parked' ? 'parked'
+      : ['done', 'tried'].includes(status) ? 'past' : step.wait && !state[step.id]?.s ? 'wait' : 'do') })
+  }
+  const update = (step, entry) => {
+    const next = { ...state, [step.id]: { ...entry, at: new Date().toISOString() } }
+    const part = path.parts.find(p => p.steps.some(s => s.id === step.id))
+    const finished = DONE_STATES.has(entry.s) && part && !partIsFinished(part, state) && partIsFinished(part, next)
+    onState(next, finished ? part.move : null)
+    return next
+  }
+
+  function finish(step, amount) {
+    const next = update(step, { s: 'done', ...(amount ? { saved: amount } : {}) })
+    const c = cheer({ path, state: next, step, saved: amount || 0, gap, now, last: lastUsed })
+    if (c.from) setLastUsed(l => ({ ...l, [c.from]: c.head }))
+    const line = amount ? null : step.money ? 'Nothing changed this time, and now you know. That one is off the list.'
+      : currentStep(path, next, now) ? pickFresh(DONE_LINES, lastUsed.line) : 'Every step is behind you.'
+    if (line && !step.money) setLastUsed(l => ({ ...l, line }))
+    celebrate()
+    setSheet({ step, view: 'win', head: c.head, amount, line, total: savedPerMonth(next), badge: BADGES[doneCount % BADGES.length], next: currentStep(path, next, now) })
+  }
+
+  return (
+    <div className="wayout__path">
+      <div className="wayout__pgap" aria-live="polite">
+        {gap ? (
+          <>
+            <div className="wayout__pgap-top">
+              <span>Still short each month</span>
+              <b className={left ? '' : 'is-closed'}>{left ? <>{money(left)}<small>/mo</small></> : 'Closed'}</b>
+            </div>
+            <div className="wayout__pbar"><i style={{ width: `${Math.min(100, (saved / gap) * 100)}%` }} /></div>
+            <p>{left ? `Found so far: ${money(saved)} of ${money(gap)}` : `You found ${money(saved)} a month. The gap is closed.`}</p>
+          </>
+        ) : (
+          <div className="wayout__pgap-top">
+            <span>Back each month so far</span>
+            <b className={saved ? 'is-closed' : ''}>{money(saved)}<small>/mo</small></b>
+          </div>
+        )}
+      </div>
+
+      <h1 className="wayout__ptitle">Your path</h1>
+      <p className="wayout__plede">
+        Start with the glowing step, or tap any coloured one and do them in any order.
+        Grey ones need another step first.
+      </p>
+
+      <div className="wayout__ptrail" ref={trail}>
+        <svg className="wayout__ptrail-svg" aria-hidden="true">
+          {segs.map(({ a, b, id }) => {
+            const st = state[id]?.s
+            const lit = st === 'done' || st === 'tried' || (id && stepStatus(path, state, steps.find(s => s.id === id), now) === 'parked')
+            const my = (a[1] + b[1]) / 2
+            return <path key={id} className={lit ? 'is-lit' : ''} d={`M${a[0]} ${a[1]} C ${a[0]} ${my}, ${b[0]} ${my}, ${b[0]} ${b[1]}`} />
+          })}
+        </svg>
+        {(() => {
+          let i = 0
+          return path.parts.map((part, pi) => (
+            <div key={part.move} className={`wayout__ppart is-${PART_COLOURS[pi % 3]}`}>
+              <div className="wayout__psign">
+                <b>Part {part.move}</b>
+                <span>{part.title}</span>
+                {moveLink && <Link to={moveLink(part.move)}>How to do this part</Link>}
+              </div>
+              {part.steps.map(step => {
+                const x = X[i % X.length]
+                const n = ++i
+                const status = stepStatus(path, state, step, now)
+                const right = x > 50
+                return (
+                  <div key={step.id} className="wayout__prow">
+                    {status === 'now' && <span className="wayout__ptoday" style={{ left: `${x}%` }}>Today</span>}
+                    <button
+                      type="button"
+                      className={`wayout__pnode is-${status}`}
+                      style={{ left: `${x}%` }}
+                      onClick={() => open(step)}
+                      aria-label={`Step ${n}: ${step.title}`}
+                    >
+                      {status === 'done' ? <Check /> : status === 'tried' ? <Arrow /> : status === 'parked' ? <Clock /> : n}
+                    </button>
+                    <span
+                      className={`wayout__pstep is-${status}`}
+                      style={right ? { right: `${100 - x + 13}%`, textAlign: 'right' } : { left: `${x + 13}%` }}
+                    >
+                      {step.title}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          ))
+        })()}
+      </div>
+
+      {headline && (
+        <div className="wayout__pend">
+          <b>Where this goes</b>
+          <h2>{headline}</h2>
+        </div>
+      )}
+
+      <p className="wayout__precord">
+        <b>What you have done:</b> {doneCount} of {steps.length} steps.
+        {waitingCount ? ` ${waitingCount} set for later.` : ''}
+        {saved ? <> <b>{money(saved)} a month</b> back, {money(saved * 12)} a year.</> : ''}
+      </p>
+
+      {sheet && (
+        <Sheet onClose={close}>
+          <SheetBody
+            sheet={sheet} path={path} state={state} now={now}
+            onClose={close} onOpen={open} setSheet={setSheet}
+            onFinish={finish} onUpdate={update}
+          />
+        </Sheet>
+      )}
+      <Confetti />
+    </div>
+  )
+}
+
+const DONE_STATES = new Set(['done', 'tried'])
+
+function Sheet({ children, onClose }) {
+  const [on, setOn] = useState(false)
+  useEffect(() => { const id = requestAnimationFrame(() => setOn(true)); return () => cancelAnimationFrame(id) }, [])
+  useEffect(() => {
+    const esc = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [onClose])
+  // 🔴 PORTALLED TO <body>. Inside the page, an ancestor with a transform (the
+  // reveal animations) makes `position: fixed` relative to IT, so the sheet sat
+  // at the bottom of the whole tall page, off screen, behind a dimmed scrim.
+  return createPortal(
+    <div className="wayout__pportal">
+      <div className={`wayout__pscrim${on ? ' is-on' : ''}`} onClick={onClose} />
+      <div className={`wayout__psheet${on ? ' is-on' : ''}`} role="dialog" aria-modal="true">
+        <div className="wayout__pgrab" />
+        {children}
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+function SheetBody({ sheet, path, state, now, onClose, onOpen, setSheet, onFinish, onUpdate }) {
+  const { step, view } = sheet
+  const [amount, setAmount] = useState('')
+  const [bad, setBad] = useState(false)
+  const back = <button type="button" className="wayout__pbtn is-soft" onClick={onClose}>Back to the path</button>
+  const mins = <div className="wayout__pmeta"><span>About {step.minutes} minutes</span></div>
+
+  if (view === 'blocked') {
+    const first = blockedBy(path, state, step)
+    return (
+      <>
+        <p className="wayout__peyebrow">One thing first</p>
+        <h3>{step.title}</h3>
+        {step.why && <p className="wayout__pwhy">{step.why}</p>}
+        <div className="wayout__pnote"><b>This opens after</b>{first?.title}</div>
+        <div className="wayout__pacts">
+          {first && <button type="button" className="wayout__pbtn is-go" onClick={() => onOpen(first)}>Go to that step</button>}
+          {back}
+        </div>
+      </>
+    )
+  }
+
+  if (view === 'parked') {
+    return (
+      <>
+        <p className="wayout__peyebrow">Comes back {step.wait?.label}</p>
+        <h3>{step.title}</h3>
+        {step.why && <p className="wayout__pwhy">{step.why}</p>}
+        <p>Your check-in email will bring this back {step.wait?.label}. Nothing to do until then.</p>
+        <div className="wayout__pacts">
+          {back}
+          <button type="button" className="wayout__pbtn is-soft" onClick={() => setSheet({ step, view: 'do' })}>I'm ready to do it now</button>
+        </div>
+      </>
+    )
+  }
+
+  if (view === 'wait') {
+    return (
+      <>
+        <p className="wayout__peyebrow">Later · {step.wait.label}</p>
+        <h3>{step.title}</h3>
+        {step.why && <p className="wayout__pwhy">{step.why}</p>}
+        <div className="wayout__pnote"><b>Nothing to do today</b>This one comes back {step.wait.label}. Your check-in email will remind you, and the path keeps going.</div>
+        <div className="wayout__pacts">
+          <button type="button" className="wayout__pbtn is-go" onClick={() => { onUpdate(step, { s: 'parked', until: untilFor(step, now) }); onClose() }}>Got it, keep going</button>
+        </div>
+      </>
+    )
+  }
+
+  if (view === 'past') {
+    const st = state[step.id]
+    return (
+      <>
+        <p className="wayout__peyebrow">{st?.s === 'tried' ? "Tried. This one couldn't change" : 'Done'}</p>
+        <h3>{step.title}</h3>
+        {step.why && <p className="wayout__pwhy">{step.why}</p>}
+        {st?.saved ? <p><b>{money(st.saved)} a month</b> back from this one.</p> : null}
+        <div className="wayout__pacts">{back}</div>
+      </>
+    )
+  }
+
+  if (view === 'amount') {
+    const submit = e => {
+      e.preventDefault()
+      const n = parseAmount(amount)
+      if (!n) { setBad(true); return }
+      onFinish(step, n)
+    }
+    return (
+      <>
+        <p className="wayout__peyebrow">Nice. One question</p>
+        <h3>What does it change each month?</h3>
+        <form className="wayout__pown" onSubmit={submit} noValidate>
+          <label htmlFor="wayout-path-amount">Type the amount</label>
+          <div className="wayout__pown-row">
+            <span>$</span>
+            <input id="wayout-path-amount" inputMode="decimal" autoComplete="off" placeholder="0" value={amount}
+              onChange={e => { setAmount(e.target.value); setBad(false) }} autoFocus />
+            <em>a month</em>
+            <button type="submit" className="wayout__pbtn is-go">Save</button>
+          </div>
+          {bad && <p className="wayout__perr">Type the amount in dollars, like 35.</p>}
+        </form>
+        <div className="wayout__ppicks">
+          <button type="button" className="wayout__ppick" onClick={() => onFinish(step, 0)}>Nothing changed</button>
+          <button type="button" className="wayout__ppick" onClick={() => onFinish(step, 0)}>I'm not sure yet</button>
+        </div>
+      </>
+    )
+  }
+
+  if (view === 'later') {
+    const pick = when => {
+      const next = onUpdate(step, { s: 'later' })
+      const other = currentStep(path, next, now)
+      setSheet({ step, view: 'laterSet', when, other: other && other.id !== step.id ? other : null })
+    }
+    return (
+      <>
+        <p className="wayout__peyebrow">That's fine</p>
+        <h3>When is a better time?</h3>
+        <div className="wayout__ppicks">
+          <button type="button" className="wayout__ppick" onClick={() => pick('tonight')}>Tonight</button>
+          <button type="button" className="wayout__ppick" onClick={() => pick('this weekend')}>This weekend</button>
+          <button type="button" className="wayout__ppick is-wide" onClick={() => pick('in a few days')}>In a few days</button>
+        </div>
+      </>
+    )
+  }
+
+  if (view === 'laterSet') {
+    return (
+      <>
+        <h3>It will be here {sheet.when}</h3>
+        <p className="wayout__pwhy">
+          It stays on your path, nothing lost.{sheet.other ? ' Meanwhile, here is something you can do now.' : ''}
+        </p>
+        <div className="wayout__pacts">
+          {sheet.other && <button type="button" className="wayout__pbtn is-go" onClick={() => onOpen(sheet.other)}>Show me</button>}
+          {back}
+        </div>
+      </>
+    )
+  }
+
+  if (view === 'nope') {
+    return (
+      <>
+        <p className="wayout__peyebrow">That's useful to know</p>
+        <h3>What do you want to do?</h3>
+        <p className="wayout__pwhy">Some things just can't budge. That's normal, and it isn't a step backwards.</p>
+        <div className="wayout__pacts">
+          {step.alt && !sheet.altShown && (
+            <button type="button" className="wayout__pbtn is-go" onClick={() => setSheet({ step, view: 'alt' })}>Try another way</button>
+          )}
+          <button type="button" className={`wayout__pbtn ${step.alt && !sheet.altShown ? 'is-soft' : 'is-go'}`} onClick={() => {
+            const next = onUpdate(step, { s: 'tried' })
+            setSheet({ step, view: 'moved', next: currentStep(path, next, now) })
+          }}>This can't change. Move on</button>
+          <button type="button" className="wayout__pbtn is-soft" onClick={onClose}>Not now</button>
+        </div>
+      </>
+    )
+  }
+
+  if (view === 'alt') {
+    // ⚠️ The other way is shown on the same step rather than added as a new
+    // one: a step id never changes, so their taps always line up with it.
+    return (
+      <>
+        <div className="wayout__pnote"><b>The plan changed</b>Here's another way to the same result.</div>
+        <h3>{step.alt.title}</h3>
+        {step.alt.why && <p className="wayout__pwhy">{step.alt.why}</p>}
+        <div className="wayout__pmeta"><span>About {step.alt.minutes} minutes</span></div>
+        <div className="wayout__pacts">
+          <button type="button" className="wayout__pbtn is-go" onClick={() => (step.money ? setSheet({ step, view: 'amount' }) : onFinish(step, 0))}>I did it</button>
+          <div className="wayout__ptwo">
+            <button type="button" className="wayout__pbtn is-soft" onClick={() => setSheet({ step, view: 'later' })}>Not yet</button>
+            <button type="button" className="wayout__pbtn is-soft" onClick={() => setSheet({ step, view: 'nope', altShown: true })}>It didn't work</button>
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  if (view === 'moved') {
+    return (
+      <>
+        <div className="wayout__pwin">
+          <div className="wayout__pburst is-sky"><Arrow /></div>
+          <h3>Off the list. Moving on</h3>
+          <p className="wayout__pwhy">Now you know this one is fixed. The path keeps going.</p>
+        </div>
+        <div className="wayout__pacts">
+          {sheet.next
+            ? <button type="button" className="wayout__pbtn is-go" onClick={() => onOpen(sheet.next)}>Next step</button>
+            : back}
+        </div>
+      </>
+    )
+  }
+
+  if (view === 'win') {
+    const { kind, tone } = sheet.badge
+    return (
+      <>
+        <div className="wayout__pwin">
+          <div className={`wayout__pburst is-${tone}`}><Badge kind={kind} /></div>
+          <h3 className="wayout__pcheer">{sheet.head}</h3>
+          {sheet.amount
+            ? <><div className="wayout__pbig">{money(sheet.amount)} a month</div><p>That's <b>{money(sheet.amount * 12)} a year</b> back.</p></>
+            : <p className="wayout__pwhy">{sheet.line}</p>}
+        </div>
+        <div className="wayout__pacts">
+          {sheet.next
+            ? <button type="button" className="wayout__pbtn is-go" onClick={() => onOpen(sheet.next)}>Next step</button>
+            : back}
+        </div>
+      </>
+    )
+  }
+
+  // 'do': the step itself.
+  const isToday = currentStep(path, state, now)?.id === step.id
+  return (
+    <>
+      <p className="wayout__peyebrow">
+        {state[step.id]?.s === 'later' ? 'You put this one off. Ready now?' : isToday ? "Today's step" : 'You can do this one any time'}
+      </p>
+      <h3>{step.title}</h3>
+      {step.why && <p className="wayout__pwhy">{step.why}</p>}
+      {mins}
+      <div className="wayout__pacts">
+        <button type="button" className="wayout__pbtn is-go" onClick={() => (step.money ? setSheet({ step, view: 'amount' }) : onFinish(step, 0))}>I did it</button>
+        <div className="wayout__ptwo">
+          <button type="button" className="wayout__pbtn is-soft" onClick={() => setSheet({ step, view: 'later' })}>Not yet</button>
+          <button type="button" className="wayout__pbtn is-soft" onClick={() => setSheet({ step, view: 'nope' })}>It didn't work</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── The celebration ─────────────────────────────────────────────────────────
+
+let fire = null
+
+/** Chime, haptic and a short burst of colour. Only ever from a tap. */
+function celebrate() {
+  tick()
+  buzz()
+  chime()
+  fire?.()
+}
+
+let ac = null
+function chime() {
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)()
+    if (ac.state === 'suspended') ac.resume().catch(() => {})
+    ;[660, 990].forEach((f, k) => {
+      const o = ac.createOscillator()
+      const g = ac.createGain()
+      const t = ac.currentTime + 0.08 + k * 0.11
+      o.type = 'sine'
+      o.frequency.value = f
+      g.gain.setValueAtTime(0.0001, t)
+      g.gain.exponentialRampToValueAtTime(0.09, t + 0.02)
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35)
+      o.connect(g).connect(ac.destination)
+      o.start(t)
+      o.stop(t + 0.4)
+    })
+  } catch {
+    // Decoration. Never let it reach the caller.
+  }
+}
+
+function Confetti() {
+  const ref = useRef(null)
+  useEffect(() => {
+    fire = () => {
+      const c = ref.current
+      if (!c || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+      const x = c.getContext('2d')
+      const dpr = window.devicePixelRatio || 1
+      const w = window.innerWidth, h = window.innerHeight
+      c.width = w * dpr; c.height = h * dpr
+      x.setTransform(dpr, 0, 0, dpr, 0, 0)
+      const cols = ['#1DB45A', '#FFB020', '#FF6B4A', '#2E9BF0', '#FFD84D']
+      const bits = Array.from({ length: 90 }, () => ({
+        x: w / 2, y: h * 0.55, vx: (Math.random() - 0.5) * 13, vy: -Math.random() * 15 - 5,
+        r: Math.random() * 6, w: 6 + Math.random() * 6, h: 9 + Math.random() * 7,
+        col: cols[Math.floor(Math.random() * cols.length)], spin: (Math.random() - 0.5) * 0.4,
+      }))
+      let t = 0
+      const frame = () => {
+        x.clearRect(0, 0, w, h)
+        for (const b of bits) {
+          b.x += b.vx; b.y += b.vy; b.vy += 0.45; b.vx *= 0.99; b.r += b.spin
+          x.save(); x.translate(b.x, b.y); x.rotate(b.r); x.fillStyle = b.col
+          x.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); x.restore()
+        }
+        if (++t < 110) requestAnimationFrame(frame)
+        else x.clearRect(0, 0, w, h)
+      }
+      frame()
+    }
+    return () => { fire = null }
+  }, [])
+  return createPortal(<canvas ref={ref} className="wayout__pconfetti" aria-hidden="true" />, document.body)
+}

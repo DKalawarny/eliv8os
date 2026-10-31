@@ -311,12 +311,9 @@ function PlayMove({ order }) {
         const current = s.map.moves[order - 1]
         setMove(current)
 
-        // 🔴 THE GATE IS ENFORCED HERE TOO, NOT ONLY IN THE UI. The plan page
-        // only shows the door once the move above is ticked — but the URL is
-        // just a URL, and a product whose ordering can be skipped by typing
-        // /play/3 does not have an order, it has a menu. Generating move
-        // three's play-by-play for somebody who has not done move one also
-        // spends real money writing instructions that cannot work yet.
+        // ⚠️ moveIsOpen is always true since 31 Oct 2026 (Daniel: never block
+        // unless a thing truly has to come first). The check stays so the rule
+        // keeps one home in session.js if it ever changes again.
         const prog = await loadProgress(s.id)
         if (cancelled) return
         setIsDone(prog.done.has(order))

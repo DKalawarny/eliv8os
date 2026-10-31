@@ -74,6 +74,7 @@ const WayoutStuckPage  = lazy(() => import('./pages/wayout/Situations').then(m =
 const WayoutIntake     = lazy(() => import('./pages/wayout/Intake'))
 const WayoutPlan       = lazy(() => import('./pages/wayout/Plan'))
 const WayoutPlay       = lazy(() => import('./pages/wayout/Play'))
+const WayoutPath       = lazy(() => import('./pages/wayout/Path'))
 const WayoutDone       = lazy(() => import('./pages/wayout/Done'))
 const WayoutChapter    = lazy(() => import('./pages/wayout/Chapter'))
 const WayoutHistory    = lazy(() => import('./pages/wayout/History'))
@@ -102,6 +103,9 @@ const WayoutPreviewIn  = import.meta.env.DEV
   : null
 const WayoutPreviewPb  = import.meta.env.DEV
   ? lazy(() => import('./pages/wayout/PreviewPlaybook'))
+  : null
+const WayoutPreviewPath = import.meta.env.DEV
+  ? lazy(() => import('./pages/wayout/PreviewPath'))
   : null
 
 const AdminBackfill  = lazy(() => import('./pages/AdminBackfill'))
@@ -434,6 +438,9 @@ export default function App() {
             sends them back if they have no map yet. */}
         <Route path="/wayout/play/:move" element={<LazyRoute><RequireWayout><WayoutPlay /></RequireWayout></LazyRoute>} />
         <Route path="/play/:move" element={<LazyRoute><RequireWayout><WayoutPlay /></RequireWayout></LazyRoute>} />
+        {/* ⭐ The path (31 Oct 2026): the three moves as small steps. Paid half. */}
+        <Route path="/wayout/path" element={<LazyRoute><RequireWayout><WayoutPath /></RequireWayout></LazyRoute>} />
+        <Route path="/path" element={<LazyRoute><RequireWayout><WayoutPath /></RequireWayout></LazyRoute>} />
         {/* After the third move — the only page that asks instead of telling. */}
         {/* ⭐⭐ The door into a new chapter, and the record of every one before
             it. Both need a session and neither needs a finished plan — somebody
@@ -459,6 +466,10 @@ export default function App() {
         {/* ⚠️ Needs a session — it calls the real model. */}
         {import.meta.env.DEV && (
           <Route path="/wayout/preview/playbook" element={<LazyRoute><RequireWayout><WayoutPreviewPb /></RequireWayout></LazyRoute>} />
+          )}
+        {/* No session and no model: Luis's sample path, taps kept in memory. */}
+        {import.meta.env.DEV && (
+          <Route path="/wayout/preview/path" element={<LazyRoute><WayoutPreviewPath /></LazyRoute>} />
           )}
 
         {/* Public auth routes */}

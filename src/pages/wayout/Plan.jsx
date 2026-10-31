@@ -4,7 +4,7 @@ import WayoutShell from './WayoutShell'
 import {
   loadOrCreateSession, loadSessionById, generateMap, countRebuild, insistOn, wantPlaybook, loadProgress,
   askAboutPlan, chooseBetween, savePlanThread, saveAnswers, chapterChain, saveMapKeepingLast, restorePreviousMap,
-  markMoveDone, saveMoveNote, WAYOUT_MAX_REBUILDS, enforceMapContract, mapProblems, historyFor, enrichAnswers,
+  markMoveDone, moveIsOpen, saveMoveNote, WAYOUT_MAX_REBUILDS, enforceMapContract, mapProblems, historyFor, enrichAnswers,
 } from '../../lib/wayout/session'
 import { WAYOUT_MAP_LABEL, WAYOUT_BASE, WAYOUT_INTAKE } from '../../lib/wayout/brand'
 import { editDestination } from '../../lib/wayout/sessionHome'
@@ -853,6 +853,7 @@ export default function Plan() {
       onRestore={past || !(session?.map_history ?? []).length ? null : restorePlan}
       refused={refused}
       onOpenPlaybook={past ? null : openPlaybook}
+      onOpenPath={past ? null : () => navigate(`${WAYOUT_BASE}/path`)}
       onRegenerate={!past && import.meta.env.DEV ? regenerateNow : null}
       onMove={past ? null : setMoveDone}
       onInsist={past ? null : insist}
@@ -955,7 +956,7 @@ function WorthAsk({ onSave }) {
  * that cannot work would be worse than not offering one.
  */
 export function Map({
-  map, onRebuild, onRedoFromThread, onDropDraft, onRemoveVersion, onChoose, onGoWith, onBringBack, onCorrect, answers = {}, choosing = false, chooseErr = '', onRestore, onSwitchVersion, liveMap = null, threadBuild = null, threadErr = '', refused = false, onOpenPlaybook, onRegenerate, onMove, onInsist, onNote,
+  map, onRebuild, onRedoFromThread, onDropDraft, onRemoveVersion, onChoose, onGoWith, onBringBack, onCorrect, answers = {}, choosing = false, chooseErr = '', onRestore, onSwitchVersion, liveMap = null, threadBuild = null, threadErr = '', refused = false, onOpenPlaybook, onOpenPath = null, onRegenerate, onMove, onInsist, onNote,
   moveNotes = {}, progress, rebuilding = false, locked = false, error = '', onDismissError = null, spent = false, chapter = 1,
   thread = [], onSay = null, asking = false, past = false, earlier = [],
 }) {
@@ -1328,9 +1329,12 @@ export function Map({
           {map.moves?.map((m, i) => {
             const order = i + 1
             const isDone = ticked.has(order)
-            // ⚠️ Unlocked means the move BEFORE it is ticked. Move one always.
-            const isOpen = order === 1 || ticked.has(order - 1)
-            const state = isDone ? 'done' : (isOpen ? 'now' : 'locked')
+            // ⭐ Every move is open (Daniel, 31 Oct 2026: never block somebody
+            // unless it truly has to be done first; see lib/wayout/path.js).
+            // "You are here" stays on the first one not done, as a suggestion.
+            const isOpen = moveIsOpen(order, ticked)
+            const here = map.moves.findIndex((_, k) => !ticked.has(k + 1)) + 1
+            const state = isDone ? 'done' : (order === here ? 'now' : 'open')
             const theirs = moveNotes?.[order]
 
             return (
@@ -1751,7 +1755,7 @@ export function Map({
             Most people get stuck on these. The walkthrough shows you how to handle each one.
           </p>
         )}
-        <PlaybookCta onOpen={onOpenPlaybook} hasOpened={hasOpened} />
+        <PlaybookCta onOpen={onOpenPlaybook} onPath={onOpenPath} hasOpened={hasOpened} />
       </div>
 
       {/* ⭐ After our own offer, never before it: an addition, not a switch. */}
@@ -1849,7 +1853,7 @@ export function Map({
  * paid half — whether people want the how badly enough to ask for it is the
  * entire commercial thesis, and this measures it for the price of one column.
  */
-function PlaybookCta({ onOpen, hasOpened = false }) {
+function PlaybookCta({ onOpen, onPath = null, hasOpened = false }) {
   // ⭐⭐ IT EXISTS NOW, SO THE BUTTON DOES THE THING. This was a waiting list
   // for one day, which was the honest CTA while there was nothing behind it —
   // an empty shelf reads worse than no shelf. There is something behind it.
@@ -1867,9 +1871,18 @@ function PlaybookCta({ onOpen, hasOpened = false }) {
           it covered the no-argument case and it was never reached.
           ⚠️ A default parameter is not a guard when the caller is a DOM
           handler — the event is always an argument. */}
-      <button className="wayout__btn wayout__btn--sun" onClick={() => onOpen()}>
+      {/* ⭐ The path (31 Oct 2026): the three moves as small steps to tap
+          through. It leads, because it is where somebody starts DOING; the full
+          walkthrough of each move is one tap away from every part of it. */}
+      {onPath && (
+        <button className="wayout__btn wayout__btn--sun" onClick={() => onPath()}>
+          {WAYOUT_PAYMENTS_LIVE ? `Start your path, ${WAYOUT_PRICE_FULL}` : 'Start your path, step by step'}
+        </button>
+      )}
+      <button className={onPath ? 'wayout__btn wayout__btn--quiet' : 'wayout__btn wayout__btn--sun'} onClick={() => onOpen()}>
         {hasOpened
           ? 'Back to the walkthrough'
+          : onPath ? 'Read the full walkthrough'
           : WAYOUT_PAYMENTS_LIVE ? `Show me how, ${WAYOUT_PRICE_FULL}` : 'Show me how'}
       </button>
       {/* ⚠️ THE PRICE LINE IS AN ANSWER TO "what will this cost me", and once
