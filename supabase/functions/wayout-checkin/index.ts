@@ -26,6 +26,7 @@
 
 import { json, preflight } from '../_shared/cors.ts'
 import { serviceClient } from '../_shared/supabase.ts'
+import { pathNext, type PathShape, type PathState } from '../_shared/pathNext.ts'
 
 interface Due {
   session_id: string
@@ -86,30 +87,75 @@ function alreadyDone(
     : `That is ${done.length} done so far. The last was "${title}", on ${when}.`
 }
 
+/**
+ * 🔴 31 Oct 2026, three fixes to this copy:
+ *   · It spoke as "I" ("I've not heard anything", "I'll rework the move").
+ *     Nobody is on the other end, and the product must never imply a person.
+ *   · "which is completely normal" + "these things…" ran together with no
+ *     full stop: "normalthese things take as long as they take".
+ *   · "mark it off and the next move opens" stopped being true when every
+ *     move opened from the start (Daniel, 31 Oct 2026).
+ */
 function compose(moveTitle: string, gate: string, count: number) {
   if (count >= 4) {
     return {
-      subject: 'Want me to stop checking in?',
-      lead: `You're still on "${moveTitle}", and I've not heard anything for a while.`,
-      ask: "If it stalled, say what got in the way and I'll rework the move around it. "
-        + "If you'd rather I left you to it, the link at the bottom stops these for good.",
+      subject: 'Should these check-ins stop?',
+      lead: `You're still on "${moveTitle}", and nothing has changed for a while.`,
+      ask: 'If it stalled, open your plan and write what got in the way under the move. It gets reworked around it. '
+        + 'If you would rather not get these, the link at the bottom stops them for good.',
     }
   }
   if (count >= 2) {
     return {
       subject: `Still on: ${moveTitle}`,
-      lead: `Nothing's moved on "${moveTitle}" for a week, which is completely normal`
-        + 'these things take as long as they take.',
+      lead: `Nothing has moved on "${moveTitle}" for a week. That is normal. These things take as long as they take.`,
       ask: `The one thing it's waiting on is: ${gate} `
-        + "If that's turned out to be wrong, or something changed, tell me and I'll redo the move.",
+        + 'If that turned out to be wrong, or something changed, write it under the move and the move gets rewritten.',
     }
   }
   return {
     subject: `How's "${moveTitle}" going?`,
-    lead: `You're on move "${moveTitle}".`,
+    lead: `You're on "${moveTitle}".`,
     ask: `It's done when: ${gate} `
-      + "If you've got there, mark it off and the next move opens. If you're stuck on a "
-      + "specific bit, ask. That's what the box on the move is for.",
+      + "When you get there, mark it done on your plan. If you're stuck on one part, ask in the box under the move.",
+  }
+}
+
+/**
+ * ⭐ FOR SOMEBODY ON THE PATH (31 Oct 2026): name the one step, in their plan's
+ * own words, and link straight to it. A step they parked for later and whose
+ * date has come goes first: they asked to be reminded, and this is it.
+ */
+function composePath(p: ReturnType<typeof pathNext>, count: number) {
+  const record = p.done ? `You have done ${p.done} of ${p.total} steps. ` : ''
+  if (count >= 4) {
+    return {
+      subject: 'Should these check-ins stop?',
+      lead: `${record}Nothing has moved on your path for a while.`,
+      ask: 'If a step cannot happen, open it and tap "It didn\'t work", and the path moves on without it. '
+        + 'If you would rather not get these, the link at the bottom stops them for good.',
+    }
+  }
+  if (p.due) {
+    return {
+      subject: `It's time: ${p.due.title}`,
+      lead: `You set this step for later, and the day has come: "${p.due.title}".`,
+      ask: `${p.due.why ? `${p.due.why} ` : ''}Open your path and tap it once it's done.`,
+    }
+  }
+  const step = p.next!
+  const mins = step.minutes ? ` It takes about ${step.minutes} minutes.` : ''
+  if (count >= 2) {
+    return {
+      subject: `Still waiting on your path: ${step.title}`,
+      lead: `${record}Next on your path: "${step.title}".${mins}`,
+      ask: 'If it cannot happen, open it and tap "It didn\'t work". The path moves on, and nothing is lost.',
+    }
+  }
+  return {
+    subject: `Your next step: ${step.title}`,
+    lead: `${record}Next on your path: "${step.title}".${mins}`,
+    ask: step.why ?? '',
   }
 }
 
@@ -188,25 +234,29 @@ Deno.serve(async (req: Request) => {
       // that paraphrases somebody's plan back at them slightly wrong is worse
       // than one that says nothing.
       const { data: sess } = await admin
-        .from('wayout_sessions').select('map').eq('id', row.session_id).maybeSingle()
+        .from('wayout_sessions').select('map, path, path_state').eq('id', row.session_id).maybeSingle()
       const moves = (sess?.map as { moves?: Array<{ title?: string; gate?: string }> })?.moves ?? []
       const move = moves[current - 1]
       if (!move?.title) { failures.push(`${row.session_id}: no move ${current}`); continue }
 
+      // ⭐ On the path, the email is about the step, and links to the path.
+      const onPath = pathNext(sess?.path as PathShape | null, (sess?.path_state ?? {}) as PathState)
+      const usePath = !!(onPath.due || onPath.next)
+
       const first = (row.name ?? '').split(' ')[0] || 'there'
-      const { subject, lead: baseLead, ask } = compose(
-        move.title, move.gate ?? 'you decide it is done.', row.checkin_count,
-      )
+      const { subject, lead: baseLead, ask } = usePath
+        ? composePath(onPath, row.checkin_count)
+        : compose(move.title, move.gate ?? 'you decide it is done.', row.checkin_count)
       /**
        * ⚠️ NOT ON THE FOURTH ONE. At that point the email is offering to stop,
        * and opening it with a tally of what they have managed would read as
        * making a point. The record belongs where somebody is still moving.
        */
-      const record = row.checkin_count >= 4
+      const record = row.checkin_count >= 4 || usePath
         ? null
         : alreadyDone(pbs ?? [], moves)
       const lead = record ? `${record} ${baseLead}` : baseLead
-      const link = `${site}/wayout/plan`
+      const link = `${site}/wayout/${usePath ? 'path' : 'plan'}`
       const stopLink = `${Deno.env.get('SUPABASE_URL')}/functions/v1/wayout-checkin?stop=${row.session_id}`
 
       const res = await fetch('https://api.resend.com/emails', {
@@ -236,7 +286,7 @@ Deno.serve(async (req: Request) => {
             + `Stop these check-ins: ${stopLink}\n`,
           html:
             `<p>Hi ${first},</p><p>${lead}</p><p>${ask}</p>`
-            + `<p><a href="${link}">Open your plan</a></p>`
+            + `<p><a href="${link}">${usePath ? 'Open your path' : 'Open your plan'}</a></p>`
             + `<p style="color:#667;font-size:13px">`
             + `<a href="${stopLink}" style="color:#667">Stop these check-ins</a></p>`,
         }),

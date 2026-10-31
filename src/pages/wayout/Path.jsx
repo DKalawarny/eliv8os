@@ -127,6 +127,7 @@ export default function Path() {
         gap={monthlyGap(session?.map)}
         onState={onState}
         moveLink={move => `${WAYOUT_BASE}/play/${move}`}
+        doneLink={`${WAYOUT_BASE}/done`}
       />
       {error && <p className="wayout__path-err" role="alert">{error}</p>}
     </WayoutShell>
@@ -166,7 +167,7 @@ const Badge = ({ kind }) => (kind === 'star' ? <Star /> : kind === 'coin' ? <Coi
  * `onState(nextState, finishedMove)`; owns nothing that has to persist, so the
  * dev preview can drive it with sample data and no database.
  */
-export function PathView({ path, state, headline = '', gap = null, onState, moveLink = null, now: nowProp = null }) {
+export function PathView({ path, state, headline = '', gap = null, onState, moveLink = null, doneLink = null, now: nowProp = null }) {
   const [sheet, setSheet] = useState(null)        // { step, view, ... }
   const [lastUsed, setLastUsed] = useState({})
   const trail = useRef(null)
@@ -179,6 +180,7 @@ export function PathView({ path, state, headline = '', gap = null, onState, move
   const left = gap ? Math.max(0, gap - saved) : null
   const doneCount = steps.filter(s => ['done', 'tried'].includes(state[s.id]?.s)).length
   const waitingCount = steps.filter(s => stepStatus(path, state, s, now) === 'parked').length
+  const allDone = steps.length > 0 && doneCount === steps.length
 
   // Draw the trail between the node centres once they are laid out.
   const measure = useCallback(() => {
@@ -296,9 +298,28 @@ export function PathView({ path, state, headline = '', gap = null, onState, move
         })()}
       </div>
 
-      {headline && (
+      {/* ⭐ THE END SAYS WHAT HAPPENS NEXT (Daniel, 31 Oct 2026: "what next
+          here", on a finished path that just stopped). Straight words: did
+          the money land or not, and the one thing to do now. The "how did it
+          go" page is where the next plan starts from what actually happened. */}
+      {allDone ? (
+        <div className="wayout__pend is-finished">
+          <b>You did every step</b>
+          <h2>
+            {gap && left
+              ? `You found ${money(saved)} a month. You are still ${money(left)} a month short.`
+              : gap ? `You found ${money(saved)} a month. The ${money(gap)} gap is closed.` : 'The path is done.'}
+          </h2>
+          <p>
+            {gap && left
+              ? `That is worth knowing, not a failure. Tell us what happened, and your next plan goes after the ${money(left)} from a different direction.`
+              : 'Tell us how it went. Your next plan starts from where you are now, not where you started.'}
+          </p>
+          {doneLink && <Link className="wayout__pbtn is-go" to={doneLink}>Tell us how it went</Link>}
+        </div>
+      ) : headline && (
         <div className="wayout__pend">
-          <b>Where this goes</b>
+          <b>What you are working toward</b>
           <h2>{headline}</h2>
         </div>
       )}
@@ -641,5 +662,6 @@ function Confetti() {
     }
     return () => { fire = null }
   }, [])
+  if (typeof document === 'undefined') return null   // rendered outside a browser
   return createPortal(<canvas ref={ref} className="wayout__pconfetti" aria-hidden="true" />, document.body)
 }
