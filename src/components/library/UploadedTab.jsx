@@ -804,14 +804,17 @@ function UploadSuggestionsPanel({ defaultOpen = false, onManualEntry }) {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-5 py-3 bg-ink-50 hover:bg-ink-100 transition-colors"
+        className="w-full flex items-center justify-between gap-3 px-5 py-3 bg-ink-50 hover:bg-ink-100 transition-colors"
       >
-        <div className="flex items-center gap-2.5">
-          <span className="text-[10.5px] font-bold uppercase tracking-widest text-ink-700">
+        {/* In a half-width column the label broke onto two centred lines and
+            squeezed the hint beside it; keep the label whole and let the hint
+            wrap under it, left aligned. */}
+        <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 min-w-0 text-left">
+          <span className="text-[10.5px] font-bold uppercase tracking-widest text-ink-700 whitespace-nowrap">
             What to upload
           </span>
           <span className="text-[11px] text-ink-500">
-            · ideas, by area. You do not need all of them.
+            Ideas, by area. You do not need all of them.
           </span>
         </div>
         <span className="text-ink-400 text-xs flex-shrink-0">
