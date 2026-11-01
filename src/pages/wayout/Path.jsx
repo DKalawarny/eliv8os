@@ -7,6 +7,7 @@ import CrisisHelp from './CrisisHelp'
 import { WAYOUT_BASE } from '../../lib/wayout/brand'
 import {
   loadOrCreateSession, generatePath, savePath, savePathState, markMoveDone,
+  loadPlaybook, generateMoveQuestions, generatePlaybook, savePlaybook, playbookIsStale, wantPlaybook,
 } from '../../lib/wayout/session'
 import {
   pathIsStale, allSteps, currentStep, stepStatus, blockedBy, savedPerMonth, monthlyGap,
@@ -36,6 +37,7 @@ export default function Path() {
   const [state, setState] = useState({})
   const [working, setWorking] = useState(false)
   const [error, setError] = useState('')
+  const [howTo, setHowTo] = useState(null)        // move number whose how-to is open
   const busy = useRef(false)
 
   useEffect(() => {
@@ -126,9 +128,10 @@ export default function Path() {
         headline={session?.map?.headline}
         gap={monthlyGap(session?.map)}
         onState={onState}
-        moveLink={move => `${WAYOUT_BASE}/play/${move}`}
+        onHowTo={move => setHowTo(move)}
         doneLink={`${WAYOUT_BASE}/done`}
       />
+      {howTo && <HowToSheet session={session} order={howTo} onClose={() => setHowTo(null)} />}
       {error && <p className="wayout__path-err" role="alert">{error}</p>}
     </WayoutShell>
   )
@@ -170,7 +173,7 @@ const Badge = ({ kind }) => (kind === 'star' ? <Star /> : kind === 'coin' ? <Coi
  * `onState(nextState, finishedMove)`; owns nothing that has to persist, so the
  * dev preview can drive it with sample data and no database.
  */
-export function PathView({ path, state, headline = '', gap = null, onState, moveLink = null, doneLink = null, now: nowProp = null }) {
+export function PathView({ path, state, headline = '', gap = null, onState, moveLink = null, onHowTo = null, doneLink = null, now: nowProp = null }) {
   const [sheet, setSheet] = useState(null)        // { step, view, ... }
   const [lastUsed, setLastUsed] = useState({})
   const trail = useRef(null)
@@ -285,7 +288,11 @@ export function PathView({ path, state, headline = '', gap = null, onState, move
               <div className="wayout__psign">
                 <b>Part {part.move}</b>
                 <span>{part.title}</span>
-                {moveLink && <Link to={moveLink(part.move)}>How to do this part</Link>}
+                {/* ⭐ Opens over the path, never away from it (Daniel: "this
+                    section doesn't pop up"). */}
+                {onHowTo
+                  ? <button type="button" className="wayout__psign-link" onClick={() => onHowTo(part.move)}>How to do this part</button>
+                  : moveLink && <Link to={moveLink(part.move)}>How to do this part</Link>}
               </div>
               {part.steps.map(step => {
                 const x = X[i % X.length]
@@ -613,6 +620,185 @@ function SheetBody({ sheet, path, state, now, onClose, onOpen, setSheet, onFinis
         </div>
       </div>
     </>
+  )
+}
+
+// ── How to do a part, over the path ─────────────────────────────────────────
+
+/**
+ * ⭐⭐ THE WALKTHROUGH, AS A POP-UP OVER THE PATH (Daniel, 31 Oct 2026: "this
+ * section doesn't pop up, it just keeps going through the questions, also it's
+ * not on brand now"). Same model calls, same stored row as /play/:move, so a
+ * how-to written here is the one the full page shows and the other way round.
+ *   · questions one at a time, like the steps, then
+ *   · the how-to in the path's bright style.
+ * The full page stays, for the question box under a move.
+ */
+export function HowToSheet({ session, order, onClose, sample = null }) {
+  const move = session?.map?.moves?.[order - 1]
+  const [view, setView] = useState('loading')       // loading · asking · writing · play · error
+  const [questions, setQuestions] = useState([])
+  const [at, setAt] = useState(0)
+  const [answers, setAnswers] = useState({})
+  const [play, setPlay] = useState(null)
+  const [stale, setStale] = useState(false)
+  const [error, setError] = useState('')
+  const started = useRef(false)
+
+  useEffect(() => {
+    if (started.current || !session || !move) return
+    started.current = true
+    // Dev preview: sample questions and how-to, no model, nothing saved.
+    if (sample) { setQuestions(sample.questions); setView('asking'); return }
+    wantPlaybook(session.id).catch(() => {})
+    ;(async () => {
+      try {
+        const stored = await loadPlaybook(session.id, order)
+        if (stored?.play) {
+          setStale(playbookIsStale(stored, move))
+          setPlay(stored.play); setView('play'); return
+        }
+        const qs = await generateMoveQuestions({ answers: session.answers, map: session.map, move })
+        if (qs.length) { setQuestions(qs); setView('asking'); return }
+        await write(null)
+      } catch (err) {
+        setError(humanError(err) || 'That did not come through. Try again in a moment.'); setView('error')
+      }
+    })()
+  }, [session, order]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function write(asked) {
+    setView('writing')
+    if (sample) { setTimeout(() => { setPlay(sample.play); setView('play') }, 900); return }
+    try {
+      const written = await generatePlaybook({ answers: session.answers, map: session.map, move, asked })
+      // ⚠️ A crisis answer is never stored, same as the full page.
+      if (!written?.crisis) await savePlaybook({ sessionId: session.id, moveOrder: order, move, play: written, asked })
+      setPlay(written); setView('play')
+    } catch (err) {
+      setError(humanError(err) || 'That did not come through. Try again in a moment.'); setView('error')
+    }
+  }
+
+  let body
+  if (view === 'loading' || view === 'writing') {
+    body = (
+      <div className="wayout__pworking">
+        <div className="wayout__pspinner" aria-hidden="true" />
+        <h3>{view === 'writing' ? 'Writing how to do this part' : 'One moment'}</h3>
+        <p className="wayout__pwhy">{view === 'writing' ? 'What to do first, the words to use, and what usually goes wrong. Up to a minute.' : ''}</p>
+      </div>
+    )
+  } else if (view === 'error') {
+    body = (<><h3>That did not come through</h3><p className="wayout__pwhy">{error}</p>
+      <div className="wayout__pacts"><button type="button" className="wayout__pbtn is-soft" onClick={onClose}>Back to the path</button></div></>)
+  } else if (view === 'asking') {
+    const q = questions[at]
+    const last = at === questions.length - 1
+    const next = () => (last ? write({ questions, answers }) : setAt(at + 1))
+    body = (
+      <>
+        <p className="wayout__peyebrow">Part {order} · question {at + 1} of {questions.length}</p>
+        <div className="wayout__pdots" aria-hidden="true">{questions.map((_, i) => <i key={i} className={i <= at ? 'is-on' : ''} />)}</div>
+        <h3>{q.q}</h3>
+        {q.why && <p className="wayout__pwhy">{q.why}</p>}
+        {q.options?.length > 0 && (
+          <div className="wayout__ppicks">
+            {q.options.map(opt => (
+              <button key={opt} type="button" className={`wayout__ppick is-wide${answers[at] === opt ? ' is-picked' : ''}`}
+                onClick={() => setAnswers(a => ({ ...a, [at]: opt }))}>{opt}</button>
+            ))}
+          </div>
+        )}
+        <label className="wayout__pown-label" htmlFor={`wayout-howto-${at}`}>{q.options?.length ? 'Or say it in your own words' : 'Your answer'}</label>
+        <textarea id={`wayout-howto-${at}`} className="wayout__ptext" rows={3} placeholder="A sentence is enough."
+          value={answers[`${at}:note`] ?? ''} onChange={e => setAnswers(a => ({ ...a, [`${at}:note`]: e.target.value }))} />
+        <div className="wayout__pacts">
+          <button type="button" className="wayout__pbtn is-go" onClick={next}>{last ? 'Show me how' : 'Next'}</button>
+          <button type="button" className="wayout__pbtn is-soft" onClick={next}>Skip this one</button>
+        </div>
+      </>
+    )
+  } else if (play?.crisis) {
+    body = (
+      <div className="wayout__crisis">
+        {String(play.message).replace(/\*\*/g, '').split(/\n{2,}/).filter(Boolean).map((p, i) => <p key={i}>{p.trim()}</p>)}
+        <CrisisHelp region={session?.answers?.region} />
+      </div>
+    )
+  } else {
+    body = <PlayView play={play} order={order} stale={stale} onClose={onClose} />
+  }
+  return <Sheet onClose={onClose}>{body}</Sheet>
+}
+
+function PlayView({ play, order, stale, onClose }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(play.words.script); setCopied(true) } catch { /* select it by hand */ }
+  }
+  return (
+    <div className="wayout__pplay">
+      <p className="wayout__peyebrow">Part {order} · how to do it</p>
+      <h3>{play.title}</h3>
+      {stale && <div className="wayout__pnote"><b>Your plan changed</b>This was written before your last change. The full walkthrough page can write it again.</div>}
+
+      {play.thisWeek?.action && (
+        <div className="wayout__pfirst">
+          <b>Do this first{play.thisWeek.when ? ` · ${play.thisWeek.when}` : ''}</b>
+          <p>{play.thisWeek.action}</p>
+          {play.thisWeek.why_first && <span>{play.thisWeek.why_first}</span>}
+        </div>
+      )}
+
+      {play.words?.script && (
+        <section>
+          <h4>{play.words.context || 'What to say'}</h4>
+          <blockquote className="wayout__pscript">{play.words.script}</blockquote>
+          <button type="button" className="wayout__pcopy" onClick={copy}>{copied ? 'Copied' : 'Copy the words'}</button>
+        </section>
+      )}
+
+      {play.money && (play.money.what_to_charge || play.money.how_you_know || play.money.getting_paid) && (
+        <section>
+          <h4>The money</h4>
+          <dl className="wayout__pfacts">
+            {play.money.what_to_charge && <><dt>What to charge</dt><dd>{play.money.what_to_charge}</dd></>}
+            {play.money.how_you_know && <><dt>How you know</dt><dd>{play.money.how_you_know}</dd></>}
+            {play.money.getting_paid && <><dt>Getting paid</dt><dd>{play.money.getting_paid}</dd></>}
+          </dl>
+        </section>
+      )}
+
+      {play.need_first?.length > 0 && (
+        <section><h4>You need</h4><ul className="wayout__plist">{play.need_first.map((t, i) => <li key={i}>{t}</li>)}</ul></section>
+      )}
+      {play.dont_need_yet?.length > 0 && (
+        <section><h4>Not needed yet</h4><ul className="wayout__plist is-skip">{play.dont_need_yet.map((t, i) => <li key={i}>{t}</li>)}</ul></section>
+      )}
+
+      {play.goes_wrong?.length > 0 && (
+        <section>
+          <h4>If something goes wrong</h4>
+          {play.goes_wrong.map((g, i) => <div key={i} className="wayout__prisk"><b>{g.what}</b><span>{g.do}</span></div>)}
+        </section>
+      )}
+      {play.check_first?.length > 0 && (
+        <section>
+          <h4>Check before you start</h4>
+          {play.check_first.map((c, i) => <div key={i} className="wayout__prisk"><b>{c.thing}</b><span>Ask: {c.who_knows}</span></div>)}
+        </section>
+      )}
+
+      {play.done_when && <div className="wayout__pdonewhen"><b>You are done when</b>{play.done_when}</div>}
+      {play.opens && <section><h4>What happens next</h4><p>{play.opens}</p></section>}
+      {play.disclaimer && <p className="wayout__pfine">{play.disclaimer}</p>}
+
+      <div className="wayout__pacts">
+        <button type="button" className="wayout__pbtn is-go" onClick={onClose}>Back to the path</button>
+        <Link className="wayout__pbtn is-soft" to={`${WAYOUT_BASE}/play/${order}`}>Ask a question about this part</Link>
+      </div>
+    </div>
   )
 }
 

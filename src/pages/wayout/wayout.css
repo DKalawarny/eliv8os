@@ -3693,3 +3693,47 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
 .wayout__path .wayout__ptitle { margin-top: 28px; }
 .wayout__path .wayout__pside > .wayout__ptitle:first-child { margin-top: 0; }
 @media (min-width: 1040px) { .wayout__path .wayout__ptitle { margin-top: 36px; } }
+
+/* ── How to do a part, over the path (31 Oct 2026) ───────────────────────── */
+.wayout__psign-link { margin-top: 6px; background: none; border: 0; padding: 0; font: inherit; color: #fff; font-size: 13px;
+  font-weight: 800; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.wayout__pworking { text-align: center; padding: 18px 0 10px; }
+.wayout__pspinner { width: 46px; height: 46px; margin: 0 auto 14px; border-radius: 50%; border: 5px solid #F1EBDD; border-top-color: var(--p-green);
+  animation: wayout-spin .9s linear infinite; }
+@keyframes wayout-spin { to { transform: rotate(360deg); } }
+.wayout__pdots { display: flex; gap: 6px; margin: 2px 0 10px; }
+.wayout__pdots i { flex: 1; height: 8px; border-radius: 99px; background: #F1EBDD; }
+.wayout__pdots i.is-on { background: var(--p-green); }
+.wayout__ppick.is-picked { border-color: var(--p-green); background: var(--p-green-soft); box-shadow: 0 4px 0 var(--p-green); }
+.wayout__ppick.is-wide { text-align: left; padding: 14px 16px; font-size: 15px; }
+.wayout__pown-label { display: block; margin: 14px 0 6px; font-weight: 800; font-size: 14px; color: var(--p-muted); }
+.wayout__ptext { width: 100%; box-sizing: border-box; border: 2px solid var(--p-line); border-radius: 16px; padding: 12px 14px; font: inherit;
+  font-size: 16px; color: var(--ink); background: #fff; resize: vertical; margin-bottom: 14px; }
+.wayout__ptext:focus { outline: 0; border-color: var(--p-sky); }
+.wayout__pplay section { margin: 18px 0 0; }
+.wayout__pplay h4 { margin: 0 0 8px; font-size: 12px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--p-sky-d); }
+.wayout__pplay p { margin: 0 0 8px; }
+.wayout__pfirst { margin-top: 12px; background: #FFF1D6; border-radius: 16px; padding: 14px 16px; box-shadow: 0 4px 0 #F3D9A6; }
+.wayout__pfirst b { display: block; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--p-amber-d); margin-bottom: 6px; }
+.wayout__pfirst p { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.35; }
+.wayout__pfirst span { display: block; margin-top: 8px; color: var(--p-muted); font-weight: 600; }
+.wayout__pscript { margin: 0; background: #fff; border: 2px solid var(--p-line); border-left: 6px solid var(--p-sky); border-radius: 14px;
+  padding: 12px 14px; font-size: 16px; line-height: 1.5; white-space: pre-wrap; }
+.wayout__pcopy { margin-top: 8px; border: 0; background: #E3F1FD; color: var(--p-sky-d); font: inherit; font-weight: 800; font-size: 14px;
+  border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.wayout__pfacts { margin: 0; display: grid; gap: 8px; }
+.wayout__pfacts dt { font-size: 13px; font-weight: 800; color: var(--p-muted); }
+.wayout__pfacts dd { margin: 0 0 4px; }
+.wayout__plist { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.wayout__plist li { background: #fff; border: 2px solid var(--p-line); border-radius: 12px; padding: 8px 12px; font-weight: 600; }
+.wayout__plist.is-skip li { color: var(--p-muted); text-decoration: line-through; text-decoration-color: rgba(94, 106, 87, .45); }
+.wayout__prisk { background: #fff; border: 2px solid var(--p-line); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; }
+.wayout__prisk b { display: block; margin-bottom: 4px; }
+.wayout__prisk span { color: var(--p-muted); font-weight: 600; }
+.wayout__pdonewhen { margin-top: 18px; background: var(--p-green-soft); border-radius: 16px; padding: 14px 16px; font-weight: 700; }
+.wayout__pdonewhen b { display: block; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--p-green-d); margin-bottom: 4px; }
+.wayout__pfine { margin-top: 16px !important; font-size: 12px; color: var(--p-muted); }
+.wayout__pplay .wayout__pacts { margin-top: 18px; }
+.wayout__pacts a.wayout__pbtn { display: block; text-decoration: none; }
+@media (min-width: 700px) { .wayout__psheet { max-width: 640px; } }
+@media (prefers-reduced-motion: reduce) { .wayout__pspinner { animation: none; } }

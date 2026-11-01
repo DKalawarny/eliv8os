@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import WayoutShell from './WayoutShell'
-import { PathView } from './Path'
+import { PathView, HowToSheet } from './Path'
 import { enforcePathContract } from '../../lib/wayout/path'
 
 /**
@@ -38,14 +38,34 @@ const RAW = { parts: [
   ] },
 ] }
 const PATH = enforcePathContract(RAW, MAP, ANSWERS)
+const SESSION = { id: 'preview', answers: ANSWERS, map: MAP }
+const SAMPLE = {
+  questions: [
+    { q: 'Who is your phone with, and roughly what do you pay?', why: 'Changes which number to call and what to ask for.', options: ['Rogers', 'Bell', 'Telus', 'Something else'] },
+    { q: 'Is anyone else on the same plan?', why: 'A family plan is moved differently from a single line.', options: [] },
+  ],
+  play: {
+    title: 'Find the $300 inside what already goes out',
+    thisWeek: { action: 'Sit down with your last bank statement and write every bill on one page.', when: 'Saturday morning', why_first: 'Every other step in this part uses that list.' },
+    words: { context: 'What to say on the phone', script: 'Hi, I have been with you for a few years and my bill has gone up. What is the cheapest plan you have that still covers what I use?' },
+    need_first: ['Your last bank statement', 'Twenty quiet minutes'],
+    dont_need_yet: ['A budgeting app', 'A new bank account'],
+    goes_wrong: [{ what: 'If they say there is nothing cheaper', do: 'Ask for the cancellations team. They have offers the first person does not.' }],
+    done_when: 'What goes out each month is at or below $4,100.',
+    opens: 'Part 2 gets easier: every car detail can go to the card instead of the month.',
+    disclaimer: 'This is a plan, not financial advice. Check the numbers before you act.',
+  },
+}
 
 export default function PreviewPath() {
   const [state, setState] = useState({ '1.1': { s: 'done' } })
+  const [howTo, setHowTo] = useState(null)
   // ?nogap shows a plan with no monthly gap (the money box should not appear).
   const gap = new URLSearchParams(window.location.search).has('nogap') ? null : 300
   return (
     <WayoutShell title="Your path (preview)" wide>
-      <PathView path={PATH} state={state} headline={MAP.headline} gap={gap} onState={next => setState(next)} moveLink={null} />
+      <PathView path={PATH} state={state} headline={MAP.headline} gap={gap} onState={next => setState(next)} moveLink={null} onHowTo={setHowTo} />
+      {howTo && <HowToSheet session={SESSION} order={howTo} sample={SAMPLE} onClose={() => setHowTo(null)} />}
     </WayoutShell>
   )
 }
