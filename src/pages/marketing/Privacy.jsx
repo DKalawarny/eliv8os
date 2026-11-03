@@ -20,7 +20,7 @@ const PRIVACY_META = buildPageMeta({
   path:        '/privacy',
 })
 
-const LAST_UPDATED = '2026-10-18'
+const LAST_UPDATED = '2026-11-02'
 
 export default function Privacy() {
   return (
@@ -116,8 +116,9 @@ export default function Privacy() {
             When you use Solomon or any AI tool, we send the prompt and the
             context needed to answer (your relevant business data) to Anthropic's
             API. Anthropic processes the request and returns the answer. Per
-            Anthropic's API terms, this data is not used to train models and is
-            not retained beyond what's needed to deliver the response.
+            Anthropic's API terms, this data is not used to train models. Like
+            any API provider, Anthropic may hold requests for a limited time to
+            check for misuse, and then deletes them.
           </p>
         </Sec>
 
@@ -186,11 +187,17 @@ export default function Privacy() {
 
         <Sec title="11. Contact">
           <p>
-            Privacy questions, requests, or complaints:{' '}
+            {OPERATOR_LEGAL_NAME} is responsible for your information and has a
+            privacy officer who answers for it. Privacy questions, requests, or
+            complaints:{' '}
             <a href={`mailto:${CONTACT_EMAIL}`} className="text-brand-600 hover:underline">{CONTACT_EMAIL}</a>.
-            Canadian customers may also contact the Office of the Privacy
-            Commissioner of Canada (OPC) if you believe we have not handled
-            your data properly.
+            We follow Canada&rsquo;s privacy law (PIPEDA) and British
+            Columbia&rsquo;s (PIPA). If you believe we have not handled your data
+            properly, you can also contact the Office of the Privacy Commissioner
+            of Canada (priv.gc.ca) or, in British Columbia, the Information and
+            Privacy Commissioner (oipc.bc.ca). If you are in Europe or the UK, you
+            have the same rights listed above and can complain to your local data
+            protection authority.
           </p>
         </Sec>
       </main>
