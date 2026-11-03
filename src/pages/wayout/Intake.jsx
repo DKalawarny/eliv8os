@@ -1,19 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import WayoutShell from './WayoutShell'
-import { Field, Dictate } from './fields'
 import { isAnswered, isThin } from '../../lib/wayout/validate'
 import { WAYOUT_OPENING, WAYOUT_OPEN, WAYOUT_SCREENS, WAYOUT_TOTAL_SCREENS } from '../../content/wayoutIntake'
 import { loadOrCreateSession, saveAnswers, markComplete, reflect, adoptDraftInto } from '../../lib/wayout/session'
 import { saveDraft, loadDraft, draftBelongsToSomeoneElse, markHandoff } from '../../lib/wayout/draft'
-import { currencyFor } from '../../lib/wayout/currency'
 import { supabase } from '../../lib/supabase'
 import { WAYOUT_BASE, timeLine } from '../../lib/wayout/brand'
 import { priceShort } from '../../lib/wayout/pricing'
 import { Marked } from '../../lib/wayout/marked.jsx'
 import { intakeProgress } from '../../lib/wayout/progress'
 import { sheetRows } from '../../lib/wayout/planSheet'
-import PlanSoFar from './PlanSoFar'
+import { Answer } from './IntakeAnswer'
+import { plainField } from '../../content/wayoutIntakePlain'
+import { tick, buzz } from '../../lib/wayout/feedback'
 
 /**
  * The way out — the opening screen and the six intake screens.
@@ -186,6 +187,23 @@ export default function Intake({ preview = false, previewReflections = null }) {
 
   const screen = step === 0 ? null : WAYOUT_SCREENS[step - 1]
 
+  /**
+   * ⭐⭐ ONE QUESTION AT A TIME (Daniel, 2 Nov 2026: "the intake is super
+   * messy", then on the test page "looks way better, apply it"). A STEP is still
+   * a whole screen of the old design, and everything that happens per step is
+   * unchanged: validation, the save, the draft, the reflection, sign-up at the
+   * end. Inside a step, `sub` walks its questions one by one, and a 1 to 10
+   * field one item at a time.
+   * ⚠️ `pos` remembers which step it belongs to, so a new step always starts at
+   * its first question (or its last, coming back) without a flash of the wrong one.
+   */
+  const [pos, setPos] = useState({ step: 0, sub: 0 })
+  const [drawer, setDrawer] = useState(false)
+  const items = itemsFor(step, answers)
+  const rawSub = pos.step === step ? pos.sub : 0
+  const sub = rawSub === 'end' ? items.length - 1 : Math.max(0, Math.min(rawSub, items.length - 1))
+  const advanceRef = useRef(null)
+
   // 🔴 EVERY ADVANCE LANDED WHEREVER THE LAST ONE ENDED. These screens are long
   // enough to scroll, and React keeps the scroll position across a state
   // change, so pressing Next at the bottom of screen three dropped you at the
@@ -349,6 +367,43 @@ export default function Intake({ preview = false, previewReflections = null }) {
     setStep(s => Math.max(0, s - 1))
   }
 
+  /** Next question in this step, or the step's own Next on its last one. */
+  function advance() {
+    const cur = items[sub]
+    if (!cur) return next()
+    const f = cur.field
+    const lastOfField = f.kind !== 'score' || cur.item === f.options.length - 1
+    if (lastOfField) {
+      if (!isAnswered(f, answers[f.key])) { setErrors({ [f.key]: f.emptyMessage ?? 'Add an answer.' }); return }
+      if (!nudged.current.has(f.key) && isThin(f, answers[f.key])) {
+        nudged.current.add(f.key)
+        setNudges({ [f.key]: f.nudgeMessage })
+        return
+      }
+    }
+    setErrors({}); setNudges({})
+    if (sub < items.length - 1) { setPos({ step, sub: sub + 1 }); return }
+    next()
+  }
+  // A tap on a choice moves on after a beat; by then the answer is in state,
+  // so the timer calls the newest advance, not the one from before the tap.
+  useEffect(() => { advanceRef.current = advance })
+
+  /** Optional questions and single 1 to 10 items can be passed over. */
+  function skip() {
+    setErrors({}); setNudges({})
+    if (sub < items.length - 1) { setPos({ step, sub: sub + 1 }); return }
+    next()
+  }
+
+  function goBack() {
+    setErrors({}); setNudges({})
+    if (sub > 0) { setPos({ step, sub: sub - 1 }); return }
+    if (step === 0) return
+    setPos({ step: step - 1, sub: 'end' })
+    back()
+  }
+
   if (loading) {
     return <WayoutShell><p className="wayout__lead">One moment.</p></WayoutShell>
   }
@@ -363,197 +418,99 @@ export default function Intake({ preview = false, previewReflections = null }) {
     )
   }
 
-  // ── S0 ────────────────────────────────────────────────────────────────────
-  // ⭐ The plan sheet, the same one the six taps started. See PlanSoFar.
+  // ── The question on screen ──────────────────────────────────────────────
   const sheet = sheetRows(answers, step)
-
-  if (step === 0) {
-    const f = WAYOUT_OPENING.field
-    return (
-      <WayoutShell wide signIn>
-        {/* ⚠️ THIS SCREEN AND THE OPEN BOX WERE THE LAST TWO STILL ON THE OLD
-            TWO-COLUMN LAYOUT, and they render a raw <textarea> rather than going
-            through <Field> — so the dictation added everywhere else never reached
-            either of them. One is the first question anybody answers; the other is
-            `story`, the required catch-all that carries an illness, a bankruptcy
-            or a record. Both are exactly where somebody would rather talk. */}
-        <div className={sheet.length ? 'wayout__ask2 wayout__ask2--sheet' : 'wayout__ask2'}>
-          <div className="wayout__prog"><b style={{ width: intakeProgress(0) }} /></div>
-          <div className="wayout__askstage">
-            <h1 className="wayout__bigq wayout__rise">
-              <Marked text={WAYOUT_OPENING.headline} highlight={WAYOUT_OPENING.highlight} />
-            </h1>
-            <p className="wayout__lead wayout__rise wayout__r1" style={{ maxWidth: '54ch' }}>
-              {WAYOUT_OPENING.lead}
-            </p>
-
-            <label className="wayout__label wayout__rise wayout__r2" htmlFor="wayout-out">{f.label}</label>
-            <div className="wayout__withmic wayout__rise wayout__r3">
-              <textarea
-                id="wayout-out"
-                className="wayout__textarea"
-                placeholder={f.placeholder}
-                value={answers[f.key] ?? ''}
-                onChange={e => setValue(f.key, e.target.value)}
-              />
-              <Dictate value={answers[f.key]} onChange={v => setValue(f.key, v)} label={f.label} />
-            </div>
-            {f.hint && <p className="wayout__hint wayout__rise wayout__r4">{f.hint}</p>}
-            {errors[f.key] && <p className="wayout__error">{errors[f.key]}</p>}
-
-            <button className="wayout__btn wayout__rise wayout__r4" onClick={next} disabled={saving}>
-              {WAYOUT_OPENING.cta}
-            </button>
-            <p className="wayout__fine wayout__rise wayout__r4" style={{ textAlign: 'left' }}>
-              {timeLine()} {priceShort()}
-            </p>
-          </div>
-          {sheet.length > 0 && <PlanSoFar rows={sheet} />}
-        </div>
-      </WayoutShell>
-    )
-  }
-
-  // ── The open door ─────────────────────────────────────────────────────────
-  // ⚠️ Deliberately NOT counted in the brand mark. The opening screen promises
-  // six questions and this is a seventh box; presenting it as "7 of 6" would
-  // make the promise a lie at the exact moment someone is deciding whether to
-  // tell the truth.
-  if (step > WAYOUT_TOTAL_SCREENS) {
-    const f = WAYOUT_OPEN.field
-    return (
-      <WayoutShell wide>
-        <div className="wayout__ask2 wayout__ask2--sheet">
-          <div className="wayout__prog"><b style={{ width: intakeProgress(step) }} /></div>
-          <div className="wayout__askstage">
-            <p className="wayout__kicker wayout__rise">Last one</p>
-            <h1 className="wayout__bigq wayout__rise wayout__r1">{WAYOUT_OPEN.question}</h1>
-            <p className="wayout__lead wayout__rise wayout__r2" style={{ maxWidth: '56ch' }}>
-              {WAYOUT_OPEN.lead}
-            </p>
-
-            <label className="wayout__label wayout__rise wayout__r3" htmlFor="wayout-story">{f.label}</label>
-            <div className="wayout__withmic wayout__rise wayout__r3">
-              <textarea
-                id="wayout-story"
-                className="wayout__textarea wayout__textarea--tall"
-                placeholder={f.placeholder}
-                value={answers[f.key] ?? ''}
-                onChange={e => setValue(f.key, e.target.value)}
-              />
-              <Dictate value={answers[f.key]} onChange={v => setValue(f.key, v)} label={f.label} />
-            </div>
-            {WAYOUT_OPEN.hint && <p className="wayout__hint wayout__rise wayout__r4">{WAYOUT_OPEN.hint}</p>}
-            {errors[f.key] && <p className="wayout__error">{errors[f.key]}</p>}
-            {nudges[f.key] && <p className="wayout__nudge" role="status">{nudges[f.key]}</p>}
-            {errors._save && <p className="wayout__error">{errors._save}</p>}
-
-            <button className="wayout__btn wayout__rise wayout__r4" onClick={next} disabled={saving}>
-              {WAYOUT_OPEN.cta}
-            </button>
-          </div>
-          <PlanSoFar rows={sheet} />
-          <div className="wayout__nav">
-            <button className="wayout__back" onClick={back} aria-label="Back">←</button>
-          </div>
-        </div>
-      </WayoutShell>
-    )
-  }
-
-  // ── S1–S6 ─────────────────────────────────────────────────────────────────
-  // The reflection shown here was generated from the PREVIOUS screen.
+  const cur = items[sub]
+  const f = cur.field
+  const isOpening = step === 0
+  const isOpen = step > WAYOUT_TOTAL_SCREENS
+  // The reflection written from the PREVIOUS screen, shown on this screen's first question.
   const prev = WAYOUT_SCREENS[step - 2]
-  const reflection = prev ? reflections[prev.id] : null
+  const reflection = !isOpening && sub === 0 && prev ? reflections[prev.id] : null
+  const from = parseFloat(intakeProgress(step)), to = parseFloat(intakeProgress(step + 1))
+  const progress = `${Math.min(100, from + (to - from) * (sub / Math.max(1, items.length)))}%`
+  const autoMoves = f.kind === 'choice' || f.kind === 'score'
+  const cta = isOpening ? WAYOUT_OPENING.cta : isOpen ? WAYOUT_OPEN.cta : 'Next'
 
   return (
-    <WayoutShell wide>
-      {/* ⭐⭐ THE SAME OBJECT AS THE SIX TAPS BEFORE IT. Daniel walked the live
-          journey and the complaint was that it stopped feeling like one thing:
-          "it needs to be more streamline." The handoff was fixed first — no
-          second introduction — but the DESIGN still changed underneath you at
-          the same moment, because the diagnostic had been rebuilt and this had
-          not. Kicker, progress bar, big question, rising entrance: identical.
-
-          ⚠️ THE OLD LEFT PANEL IS NOT SIMPLY DELETED, IT IS REDISTRIBUTED. Every
-          piece of it was there for a reason and each reason still holds — the
-          section and its WHY (a question with no stated reason reads as data
-          collection, and people answer that carefully rather than honestly), how
-          much further, what was heard, and the price. They now sit where the
-          equivalent sits on a tap screen, so nothing was lost and the dead
-          column on the left went with it. */}
-      <div className="wayout__ask2 wayout__ask2--sheet">
-        <div className="wayout__prog">
-          <b style={{ width: intakeProgress(step) }} />
-        </div>
-
-        <div className="wayout__askstage" key={step}>
-          {screen?.section && (
-            <p className="wayout__kicker wayout__rise">{screen.section}</p>
-          )}
-          <h1 className="wayout__bigq wayout__rise wayout__r1">{screen.questionFor?.(answers) ?? screen.question}</h1>
-          {screen?.why && (
-            <p className="wayout__lead wayout__rise wayout__r2" style={{ maxWidth: '58ch' }}>
-              {screen.whyFor?.(answers) ?? screen.why}
-            </p>
-          )}
-
-          <div className="wayout__fields wayout__rise wayout__r3">
-            {/* ⭐⭐ ONLY WHAT APPLIES. Daniel: "make sure the questions have value,
-                no redundancy… smarter questions that answer more than one thing to
-                speed up the onboarding." The audit found no dead questions — every
-                one of the 37 is consumed somewhere — but NO field was conditional,
-                so a single person was still asked what their partner wants and
-                somebody who ticked "doesn't apply" on faith was still asked which
-                practice and what it holds in their week.
-                🔴 On the screen whose whole job is being listened to, that is the
-                worst possible place for the form to prove it is not. */}
-            {visibleFields(screen, answers).map(f => (
-              <div key={f.key}>
-                {f.label && <label className="wayout__label">{f.labelFor?.(answers) ?? f.label}</label>}
-                {/* ⭐ 9 Oct: carried from the free taps. Said, so it does not read
-                    as the same question asked twice. */}
-                {(answers._carried ?? []).includes(f.key) && (
-                  <p className="wayout__carried">From your first answers. Add anything they missed.</p>
-                )}
-                <Field field={f} value={answers[f.key]} onChange={v => setValue(f.key, v)} currency={currencyFor(answers.region).symbol} />
-                {f.hint && <p className="wayout__hint">{f.hint}</p>}
-                {errors[f.key] && <p className="wayout__error">{errors[f.key]}</p>}
-                {nudges[f.key] && <p className="wayout__nudge" role="status">{nudges[f.key]}</p>}
-              </div>
-            ))}
-          </div>
-
-          {screen.hint && <p className="wayout__hint wayout__rise wayout__r4">{screen.hint}</p>}
-          {errors._save && <p className="wayout__error">{errors._save}</p>}
-
-          <button className="wayout__btn wayout__rise wayout__r4" onClick={next} disabled={saving}>
-            {step === WAYOUT_TOTAL_SCREENS ? 'Almost done' : 'Next'}
+    <WayoutShell wide signIn={isOpening}>
+      <div className="wayout__q2">
+        <div className="wayout__q2top">
+          <button type="button" className="wayout__q2back" onClick={goBack} disabled={isOpening} aria-label="Back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
           </button>
+          <div className="wayout__q2bar" aria-hidden="true"><i style={{ width: progress }} /></div>
+          {/* ⭐ The plan being built as they go (Daniel: "so they are enticed to see
+              the outcome"), now a button rather than a third of the screen. */}
+          <button type="button" className="wayout__q2pill" onClick={() => setDrawer(true)}>Your plan <b>{sheet.length}</b></button>
         </div>
 
-        {/* ⚠️ Only what is BEHIND them. Listing the questions still to come would
-            show the destination question early, and the whole reason the order
-            runs constraints-first is that seeing the dream first teaches people
-            to answer the constraints in a way that protects it. */}
-        <div className="wayout__sofar">
-          <em>Question {step} of {WAYOUT_TOTAL_SCREENS}</em>
-          {reflection
-            ? <span className="wayout__tok">{reflection}</span>
-            : <span className="wayout__soempty">{priceShort()}</span>}
+        <div className="wayout__q2screen" key={`${step}:${sub}`}>
+          {reflection && <p className="wayout__q2reflect">{reflection}</p>}
+          {isOpening ? (
+            <>
+              <h1><Marked text={WAYOUT_OPENING.headline} highlight={WAYOUT_OPENING.highlight} /></h1>
+              <p className="wayout__q2hint">{WAYOUT_OPENING.lead}</p>
+              <p className="wayout__q2label">{f.label}</p>
+            </>
+          ) : (
+            <>
+              <p className="wayout__q2kicker">{f.kicker}</p>
+              <h1>{f.labelFor?.(answers) ?? f.label}</h1>
+            </>
+          )}
+          {f.hint && <p className="wayout__q2hint">{f.hint}</p>}
+          {(answers._carried ?? []).includes(f.key) && (
+            <p className="wayout__q2carried">From your first answers. Add anything they missed.</p>
+          )}
+          <Answer field={f} item={cur.item} value={answers[f.key]} set={v => setValue(f.key, v)} region={answers.region}
+            onPick={() => { tick(); buzz(); setTimeout(() => advanceRef.current?.(), 260) }} onEnter={advance} />
+          {errors[f.key] && <p className="wayout__q2err" role="alert">{errors[f.key]}</p>}
+          {nudges[f.key] && <p className="wayout__q2nudge" role="status">{nudges[f.key]}</p>}
+          {errors._save && <p className="wayout__q2err" role="alert">{errors._save}</p>}
         </div>
 
-        <PlanSoFar rows={sheet} />
-
-        <div className="wayout__nav">
-          <button className="wayout__back" onClick={back} aria-label="Back">←</button>
-          {/* ⭐ Stays on screen throughout. Somebody who reads the price at
-              minute one cannot be ambushed at minute fifteen. */}
-          {reflection && <span className="wayout__fine">{priceShort()}</span>}
+        <div className="wayout__q2acts">
+          {!autoMoves && (
+            <button type="button" className="wayout__q2go" onClick={() => { if (!isOpening) tick(); advance() }} disabled={saving}>{cta}</button>
+          )}
+          {(!f.required || f.kind === 'score') && (
+            <button type="button" className="wayout__q2skip" onClick={skip} disabled={saving}>{f.kind === 'score' ? 'Skip this one' : 'Skip'}</button>
+          )}
+          {isOpening && <p className="wayout__q2fine">{timeLine()} {priceShort()}</p>}
         </div>
       </div>
+
+      {drawer && createPortal(
+        <div className="wayout__pportal wayout__q2portal">
+          <div className="wayout__q2scrim" onClick={() => setDrawer(false)} />
+          <aside className="wayout__q2drawer" aria-label="Your plan so far">
+            <button type="button" className="wayout__q2close" onClick={() => setDrawer(false)}>Close</button>
+            <h2>Your plan so far</h2>
+            <p className="wayout__q2hint">Built from your answers. Your three moves are written when you finish.</p>
+            {sheet.length ? sheet.map(r => (
+              <div key={r.label} className="wayout__q2row">
+                <b>{r.label}</b>
+                {r.text ? <p className={r.hand ? 'is-hand' : ''}>{r.text}</p> : null}
+                {r.items?.length ? <p>{r.items.join(', ')}</p> : null}
+              </div>
+            )) : <p className="wayout__q2hint">Nothing yet. It fills in as you answer.</p>}
+          </aside>
+        </div>,
+        document.body,
+      )}
     </WayoutShell>
   )
+}
+
+/** The questions of one step, in order: hidden ones left out, plain wording on,
+ *  and each 1 to 10 item its own question. */
+function itemsFor(step, answers) {
+  const fields = step === 0 ? [WAYOUT_OPENING.field]
+    : step > WAYOUT_TOTAL_SCREENS ? [WAYOUT_OPEN.field]
+    : visibleFields(WAYOUT_SCREENS[step - 1], answers)
+  return fields.map(plainField)
+    .flatMap(f => (f.kind === 'score' ? f.options.map((_, i) => ({ field: f, item: i })) : [{ field: f }]))
 }
 
 /**

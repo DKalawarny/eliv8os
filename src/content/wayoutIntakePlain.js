@@ -4,13 +4,14 @@
  *
  * Wording only. Every field key and every option key stays exactly as it is in
  * wayoutIntake.js, because that is what the plan reads; only what a person
- * SEES changes. The test page (/questions-test) lays these over the real
- * questions. When he approves, they move into wayoutIntake.js itself and this
- * file goes.
+ * SEES changes. The questions page lays these over the real questions
+ * (approved 2 Nov 2026: "looks way better, apply it").
  *
  * ⚠️ Written the way you would ask a person across a table: short, one thing
  * at a time, no labels like "Stability" or "Status" that need explaining.
  */
+import { onlyTime } from './wayoutIntake'
+
 export const PLAIN = {
   out: { kicker: 'Getting started', label: 'What would getting unstuck look like for you?', hint: 'One sentence is plenty. Rough is fine.' },
 
@@ -59,6 +60,7 @@ export const PLAIN = {
   },
   assets: {
     kicker: 'Your time', label: 'What do you have that could help you earn?', hint: 'Things you own, skills you have, people you know.',
+    labelFor: a => (onlyTime(a) ? 'What do you have that could help?' : null),
     groups: ['Things you own', 'Space', 'Skills', 'People'],
     options: {
       mower: 'Lawn mower', boat: 'Boat', parking: 'Driveway', land: 'Land or a yard', 'home-equity': 'Equity in my home',
@@ -87,7 +89,7 @@ export const PLAIN = {
   tradeRank: {
     kicker: 'What’s important', label: 'How important is each of these to you?', hint: null,
     options: {
-      comfort: 'Keeping the lifestyle you have now', space: 'Keeping a home with plenty of space', stability: 'A steady paycheque you can count on',
+      comfort: 'Keeping the lifestyle you have now', space: 'Keeping a home with plenty of space', stability: 'Knowing how much money is coming in each month',
       status: 'What other people think', savings: 'Keeping your savings untouched', 'family-proximity': 'Living close to family',
       'time-with-people': 'Time with the people you love', health: 'Looking after your health', community: 'Staying part of your community',
     },
@@ -122,6 +124,8 @@ export function plainField(field) {
   return {
     ...field,
     label: p.label ?? field.label,
+    // A plain label replaces the old one-off variants too, unless it brings its own.
+    labelFor: p.labelFor ?? (p.label ? undefined : field.labelFor),
     hint: p.hint === null ? '' : (p.hint ?? field.hint),
     kicker: p.kicker,
     options: field.key === 'goalFirst' && PLAIN.goalType.options ? relabelGoal(field.options) : relabel(field.options),

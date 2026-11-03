@@ -3825,3 +3825,13 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
 .wayout__q2row button { background: none; border: 0; padding: 0; text-align: left; font: inherit; font-weight: 700; color: var(--ink); cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .wayout__q2screen, .wayout__q2drawer, .wayout__q2burst { animation: none; } .wayout__q2bar i { transition: none; } }
 .wayout__q2chip.is-add { align-self: flex-start; }
+.wayout__q2reflect { margin: 0 0 18px; background: #fff; border: 2px solid var(--p-line); border-left: 6px solid var(--p-green); border-radius: 14px;
+  padding: 12px 14px; font-weight: 600; color: var(--ink); }
+.wayout__q2label { margin: 10px 0 8px; font-weight: 900; font-size: 18px; }
+.wayout__q2carried { margin: 0 0 10px; font-size: 14px; font-weight: 700; color: var(--p-sky-d); }
+.wayout__q2fine { margin: 4px 0 0; text-align: center; font-size: 13px; font-weight: 600; color: var(--p-muted); }
+.wayout__q2mic { position: relative; display: flex; gap: 8px; align-items: flex-start; }
+.wayout__q2mic > :first-child { flex: 1; min-width: 0; }
+.wayout__q2row p.is-hand { font-family: Caveat, cursive; font-size: 24px; font-weight: 600; line-height: 1.15; }
+.wayout__q2 h1 mark, .wayout__q2 h1 .wayout__mk { font: inherit; }
+.wayout__q2go[disabled] { opacity: .6; cursor: default; }
