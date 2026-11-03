@@ -3841,3 +3841,16 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
 .wayout__q2hint.is-sub { margin: -4px 0 10px; font-size: 15px; }
 .wayout__q2 .wayout__q2sub { font-size: 18px; margin: 0 0 10px; }
 .wayout__q2 h1 + .wayout__q2part, .wayout__q2 h1 + div > .wayout__q2sub { margin-top: 14px; }
+/* What keeps people going (2 Nov 2026). */
+.wayout__q2where { margin: 10px 0 0; text-align: center; font-size: 13px; font-weight: 800; color: var(--p-muted); }
+.wayout__q2moment { margin: 14px auto 0; width: fit-content; max-width: 100%; background: var(--p-green-soft); color: var(--p-green-d); border-radius: 999px;
+  padding: 8px 16px; font-weight: 800; font-size: 15px; animation: wayout-moment 3.2s ease forwards; }
+.wayout__q2moment b { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--p-green); color: #fff; font-size: 12px; margin-right: 4px; }
+@keyframes wayout-moment { 0% { opacity: 0; transform: translateY(-6px); } 10%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+.wayout__q2pill.is-bump b { animation: wayout-bump .5s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes wayout-bump { 0% { transform: scale(1); } 40% { transform: scale(1.45); } 100% { transform: scale(1); } }
+.wayout__q2moves { margin-top: 18px; display: grid; gap: 8px; }
+.wayout__q2move { border: 2px dashed var(--p-line); border-radius: 14px; padding: 10px 14px; display: flex; justify-content: space-between; gap: 10px; }
+.wayout__q2move b { font-weight: 900; }
+.wayout__q2move span { color: var(--p-muted); font-weight: 600; font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { .wayout__q2moment, .wayout__q2pill.is-bump b { animation: none; } }

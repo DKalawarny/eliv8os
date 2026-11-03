@@ -97,7 +97,7 @@ export const PLAIN = {
   alreadyTried: { kicker: 'What’s important', label: 'What have you tried already, and how did it go?', hint: '“Nothing yet” is a fine answer.' },
   refuse: { kicker: 'What’s important', label: 'Is there anything you won’t do, even if it would work?', hint: null },
 
-  tuesday: { kicker: 'Your goal', label: 'Picture a year from now. What does a normal day look like?', hint: 'Where are you, what are you doing, and who are you with?' },
+  tuesday: { kicker: 'The good part', label: 'Picture a year from now. What does a normal day look like?', hint: 'Where are you, what are you doing, and who are you with?' },
   yearShape: {
     kicker: 'Your goal', label: 'Would you rather earn the same every month, or more in busy seasons?', hint: null,
     options: { steady: 'The same every month', seasonal: 'Busy seasons, then time off', lumpy: 'One big payday I make last', dontmind: 'I don’t mind' },
@@ -147,9 +147,19 @@ export const GROUPS = [
   { keys: ['name', 'age', 'workType'], title: 'A bit about you' },
   { keys: ['relationship', 'kidsAges'] },
   { keys: ['timeEaters', 'hoursPerWeek'] },
-  { keys: ['takeHome', 'mustPay', 'householdTakeHome'], title: 'Your money each month' },
+  { keys: ['takeHome', 'mustPay', 'householdTakeHome'], title: 'Your money each month',
+    intro: 'Rough numbers are fine. Only your plan sees these.' },
   { keys: ['savings', 'debt'], title: 'Savings and debt' },
   { keys: ['yearShape', 'enough'], title: 'How you’d like to earn' },
   { keys: ['goalType', 'goalFirst'] },
 ]
 export const groupOf = key => GROUPS.find(g => g.keys.includes(key)) ?? null
+
+/**
+ * ⭐ WHAT KEEPS PEOPLE GOING (Daniel, 2 Nov 2026: "come at this as someone who
+ * knows human psychology and make sure it keeps interest for follow through
+ * and excitement"). Plain names for the six parts, so the page can say
+ * "Part 3 of 6" and "Your money, done". Nothing here invents urgency, keeps a
+ * streak or flatters: every line is a true thing about where they are.
+ */
+export const PART_NAMES = ['Where you are', 'About you', 'What you can start from', 'Your money', 'What’s important', 'Your goal']

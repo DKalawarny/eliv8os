@@ -13,7 +13,7 @@ import { Marked } from '../../lib/wayout/marked.jsx'
 import { intakeProgress } from '../../lib/wayout/progress'
 import { sheetRows } from '../../lib/wayout/planSheet'
 import { Answer } from './IntakeAnswer'
-import { plainField, groupOf } from '../../content/wayoutIntakePlain'
+import { plainField, groupOf, PART_NAMES } from '../../content/wayoutIntakePlain'
 import { tick, buzz } from '../../lib/wayout/feedback'
 
 /**
@@ -25,6 +25,9 @@ import { tick, buzz } from '../../lib/wayout/feedback'
  * pleasant version and it produces a plan nobody can follow.
  */
 
+
+/** Rough seconds to answer one question of each kind, for "minutes left". */
+const SECONDS = { text: 75, shorttext: 15, number: 15, chips: 15, choice: 8, score: 6 }
 
 /**
  * ⚠️ `preview` saves nothing. Dev routes use it, and so does the public practice page
@@ -202,6 +205,10 @@ export default function Intake({ preview = false, previewReflections = null, pra
   const [drawer, setDrawer] = useState(false)
   // The practice page (/questions-test) ends on its own screen; nothing is saved.
   const [practiceDone, setPracticeDone] = useState(false)
+  // A part just finished, or their name just given: said once, on the next screen.
+  const [moment, setMoment] = useState(null)
+  const [bump, setBump] = useState(false)
+  const lastCount = useRef(0)
   const items = itemsFor(step, answers)
   const rawSub = pos.step === step ? pos.sub : 0
   const sub = rawSub === 'end' ? items.length - 1 : Math.max(0, Math.min(rawSub, items.length - 1))
@@ -390,9 +397,42 @@ export default function Intake({ preview = false, previewReflections = null, pra
       if (Object.keys(thin).length) { setNudges(thin); return }
     }
     setErrors({}); setNudges({})
-    if (sub < items.length - 1) { setPos({ step, sub: sub + 1 }); return }
+    if (sub < items.length - 1) {
+      // ⚠️ Saved on every screen, not only at the end of a part, because the
+      // page says "Saved as you go" and that has to be true halfway through one.
+      if (!preview) {
+        if (session) saveAnswers(session.id, answers).catch(() => { /* saved again at the end of the part */ })
+        else saveDraft(answers, step)
+      }
+      setPos({ step, sub: sub + 1 })
+      return
+    }
     next()
   }
+  // ⭐ A finished part is marked as it happens: "Your money, done", with the tick.
+  // Their name, the screen after they give it. Each shows once, then fades.
+  const lastStep = useRef(step)
+  useEffect(() => {
+    const prevStep = lastStep.current
+    lastStep.current = step
+    if (step <= prevStep || prevStep < 1 || prevStep > PART_NAMES.length) return
+    const name = String(answers.name ?? '').trim().split(/\s+/)[0]
+    const justNamed = name && WAYOUT_SCREENS[prevStep - 1]?.fields.some(x => x.key === 'name')
+    // It belongs to the first screen of the new part; moving on hides it.
+    setMoment({ step, text: justNamed ? `Nice to meet you, ${name}. ${PART_NAMES[prevStep - 1]}, done.` : `${PART_NAMES[prevStep - 1]}, done.` })
+    tick()
+    const t = setTimeout(() => setMoment(null), 3200)
+    return () => clearTimeout(t)
+  }, [step]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The plan button pops when something new lands on it.
+  const sheetCount = sheetRows(answers, step).length
+  useEffect(() => {
+    if (sheetCount > lastCount.current) { setBump(true); const t = setTimeout(() => setBump(false), 500); lastCount.current = sheetCount; return () => clearTimeout(t) }
+    lastCount.current = sheetCount
+    return undefined
+  }, [sheetCount])
+
   // A tap on a choice moves on after a beat; by then the answer is in state,
   // so the timer calls the newest advance, not the one from before the tap.
   useEffect(() => { advanceRef.current = advance })
@@ -457,6 +497,13 @@ export default function Intake({ preview = false, previewReflections = null, pra
   // A single tap answers and moves on only when it is the only question on screen.
   const autoMoves = !group && (f.kind === 'choice' || f.kind === 'score')
   const allOptional = card.fields.every(x => !x.required)
+  // ⭐ How close the end is. People keep going when they can see it.
+  // ⚠️ Weighted: a written answer takes far longer than a tap, and "1 minute
+  // left" on a screen asking for a paragraph would be the page lying.
+  const cardsLeft = [...items.slice(sub), ...Array.from({ length: Math.max(0, WAYOUT_TOTAL_SCREENS + 1 - step) }, (_, i) => itemsFor(step + 1 + i, answers)).flat()]
+  const secondsLeft = cardsLeft.reduce((t, c) => t + c.fields.reduce((u, x) => u + (SECONDS[x.kind] ?? 20), 0), 0)
+  const minutesLeft = Math.max(1, Math.round(secondsLeft / 60))
+  const where = isOpening ? null : isOpen ? 'Last question' : `Part ${step} of ${WAYOUT_TOTAL_SCREENS} · about ${minutesLeft} minute${minutesLeft === 1 ? '' : 's'} left`
   const cta = isOpening ? WAYOUT_OPENING.cta : isOpen ? WAYOUT_OPEN.cta : 'Next'
 
   return (
@@ -470,8 +517,10 @@ export default function Intake({ preview = false, previewReflections = null, pra
           <div className="wayout__q2bar" aria-hidden="true"><i style={{ width: progress }} /></div>
           {/* ⭐ The plan being built as they go (Daniel: "so they are enticed to see
               the outcome"), now a button rather than a third of the screen. */}
-          <button type="button" className="wayout__q2pill" onClick={() => setDrawer(true)}>Your plan <b>{sheet.length}</b></button>
+          <button type="button" className={`wayout__q2pill${bump ? ' is-bump' : ''}`} onClick={() => setDrawer(true)}>Your plan <b>{sheet.length}</b></button>
         </div>
+        {where && <p className="wayout__q2where">{where}</p>}
+        {moment && moment.step === step && sub === 0 && <p className="wayout__q2moment" role="status"><b aria-hidden="true">✓</b> {moment.text}</p>}
 
         <div className="wayout__q2screen" key={`${step}:${sub}`}>
           {reflection && <p className="wayout__q2reflect">{reflection}</p>}
@@ -488,6 +537,7 @@ export default function Intake({ preview = false, previewReflections = null, pra
               <h1>{card.title ?? f.labelFor?.(answers) ?? f.label}</h1>
             </>
           )}
+          {card.intro && <p className="wayout__q2hint">{card.intro}</p>}
           {!group && f.hint && <p className="wayout__q2hint">{f.hint}</p>}
           {(answers._carried ?? []).includes(f.key) && (
             <p className="wayout__q2carried">From your first answers. Add anything they missed.</p>
@@ -516,6 +566,8 @@ export default function Intake({ preview = false, previewReflections = null, pra
             <button type="button" className="wayout__q2skip" onClick={skip} disabled={saving}>{f.kind === 'score' ? 'Skip this one' : 'Skip'}</button>
           )}
           {isOpening && <p className="wayout__q2fine">{timeLine()} {priceShort()}</p>}
+          {/* ⭐ True on every path: a draft before sign-up, the session after. */}
+          {!isOpening && !practice && <p className="wayout__q2fine">Saved as you go. Leave and come back any time.</p>}
         </div>
       </div>
 
@@ -533,6 +585,12 @@ export default function Intake({ preview = false, previewReflections = null, pra
                 {r.items?.length ? <p>{r.items.join(', ')}</p> : null}
               </div>
             )) : <p className="wayout__q2hint">Nothing yet. It fills in as you answer.</p>}
+            {/* ⭐ What it is all for, still to come. */}
+            <div className="wayout__q2moves">
+              {[1, 2, 3].map(n => (
+                <div key={n} className="wayout__q2move"><b>Move {n}</b><span>Written when you finish</span></div>
+              ))}
+            </div>
           </aside>
         </div>,
         document.body,
@@ -556,7 +614,7 @@ function itemsFor(step, answers) {
     const g = groupOf(f.key)
     const members = g ? fields.filter(x => g.keys.includes(x.key)) : [f]
     members.forEach(x => done.add(x.key))
-    cards.push({ fields: members, title: members.length > 1 ? g?.title : null })
+    cards.push({ fields: members, title: members.length > 1 ? g?.title : null, intro: g?.intro ?? null })
   }
   return cards
 }
