@@ -39,6 +39,9 @@ const DIST       = path.join(PROJECT, 'dist')
 // server, and died when that server was shut down (18 Oct 2026).
 const PORT       = Number(process.env.PRERENDER_PORT) || 4173 // vite preview default
 const HOST       = `http://127.0.0.1:${PORT}`
+// Never fetched: answered in-page, see the /wayout/ note below. https because
+// Chrome upgrades an http navigation to a .com before any interception sees it.
+const UNSTUCK_ORIGIN = 'https://getunstuckmap.com'
 
 // Keep this in sync with PUBLIC_PAGES in src/lib/seo.js.
 //
@@ -236,6 +239,36 @@ async function main() {
       })
 
       /**
+       * 🔴 /wayout/* off its own domain is sent to the LIVE getunstuckmap.com
+       * (WayoutDomainGuard in App.jsx), so a snapshot taken at
+       * 127.0.0.1/wayout/privacy was of production: the noindex shell and all.
+       * Google then reported Unstuck's privacy page as "Excluded by noindex".
+       * ⭐ So these routes load as getunstuckmap.com itself, answered from here:
+       * the page is the clean shell, every file comes from the preview server,
+       * and the app takes its own-domain path exactly as it does live.
+       */
+      const own = route.startsWith('/wayout/')
+      if (own) {
+        await page.setRequestInterception(true)
+        page.on('request', (req) => {
+          const u = req.url()
+          // Analytics runs on the real hostname; a build is not a visitor.
+          if (u.includes('plausible.io')) return req.abort()
+          if (!u.startsWith(UNSTUCK_ORIGIN)) return req.continue()
+          if (req.isNavigationRequest()) return req.respond({ status: 200, contentType: 'text/html', body: shellHtml })
+          // ⚠️ Fetched here and handed over: Chrome refuses to swap https for
+          // the preview server's http on a continued request.
+          fetch(HOST + u.slice(UNSTUCK_ORIGIN.length))
+            .then(async (r) => req.respond({
+              status: r.status,
+              contentType: r.headers.get('content-type') ?? undefined,
+              body: Buffer.from(await r.arrayBuffer()),
+            }))
+            .catch(() => req.abort())
+        })
+      }
+
+      /**
        * ⚠️ `networkidle0` WAS THE WRONG READINESS SIGNAL AND IT IS NOT THE ONE
        * THIS SCRIPT ACTUALLY TRUSTS. It waits for 500ms with no connections at
        * all — which a page that fetches Google Fonts, or retries anything, or
@@ -249,7 +282,7 @@ async function main() {
        * in the same pass. Waiting for the DOM and then for THAT is both faster
        * and strictly more correct than waiting for the network to go quiet.
        */
-      await page.goto(HOST + route, { waitUntil: 'domcontentloaded', timeout: 60_000 })
+      await page.goto(own ? UNSTUCK_ORIGIN + route.slice('/wayout'.length) : HOST + route, { waitUntil: 'domcontentloaded', timeout: 60_000 })
 
       // Wait for Helmet to flush by polling document.title for the route's
       // signature substring. react-helmet-async rewrites the title in place
@@ -324,6 +357,11 @@ async function main() {
         // <link rel="canonical">: keep only the last
         const canonicals = head.querySelectorAll('link[rel="canonical"]')
         for (let i = 0; i < canonicals.length - 1; i++) canonicals[i].remove()
+
+        // The analytics tag index.html adds on getunstuckmap.com. The /wayout/
+        // pages render on that hostname, so it is already in the DOM; saved,
+        // the live page would load it twice and count every visit twice.
+        for (const sc of head.querySelectorAll('script[src*="plausible.io"]')) sc.remove()
 
         // <meta name=… | property=…>: keep only the last per key.
         // Skips charset / viewport / non-keyed meta which we never duplicate.
