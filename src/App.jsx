@@ -431,6 +431,10 @@ export default function App() {
             END, where someone can see what they would be keeping. */}
         <Route path="/wayout"       element={<LazyRoute><WayoutIntake /></LazyRoute>} />
         <Route path="/questions"       element={<LazyRoute><WayoutIntake /></LazyRoute>} />
+        {/* ⭐ Practice page for the questions (2 Nov 2026): the real page, saving
+            nothing. Not linked anywhere; for Daniel to try changes before they go live. */}
+        <Route path="/wayout/questions-test" element={<LazyRoute><WayoutIntake preview practice /></LazyRoute>} />
+        <Route path="/questions-test" element={<LazyRoute><WayoutIntake preview practice /></LazyRoute>} />
         <Route path="/wayout/plan"  element={<LazyRoute><RequireWayout><WayoutPlan /></RequireWayout></LazyRoute>} />
         <Route path="/plan"  element={<LazyRoute><RequireWayout><WayoutPlan /></RequireWayout></LazyRoute>} />
         {/* The play-by-play for one move. Same guard as the plan — there is

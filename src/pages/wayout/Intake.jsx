@@ -13,7 +13,7 @@ import { Marked } from '../../lib/wayout/marked.jsx'
 import { intakeProgress } from '../../lib/wayout/progress'
 import { sheetRows } from '../../lib/wayout/planSheet'
 import { Answer } from './IntakeAnswer'
-import { plainField } from '../../content/wayoutIntakePlain'
+import { plainField, groupOf } from '../../content/wayoutIntakePlain'
 import { tick, buzz } from '../../lib/wayout/feedback'
 
 /**
@@ -27,14 +27,15 @@ import { tick, buzz } from '../../lib/wayout/feedback'
 
 
 /**
- * ⚠️ `preview` is DEV ONLY (see Preview routes in App.jsx) and does exactly
+ * ⚠️ `preview` saves nothing. Dev routes use it, and so does the public practice page
+ * (`practice`, /questions-test, 2 Nov 2026), which is the only prod use. It does exactly
  * three things: skips the session load, skips every write, and serves a canned
  * reflection. It changes no rendering at all — the screens, the validation and
  * the field components are the same ones a paying person gets, which is the
  * entire reason it is a prop here rather than a second copy of the intake that
  * would drift from this one within a week.
  */
-export default function Intake({ preview = false, previewReflections = null }) {
+export default function Intake({ preview = false, previewReflections = null, practice = false }) {
   const navigate = useNavigate()
   const [params] = useSearchParams()
 
@@ -199,6 +200,8 @@ export default function Intake({ preview = false, previewReflections = null }) {
    */
   const [pos, setPos] = useState({ step: 0, sub: 0 })
   const [drawer, setDrawer] = useState(false)
+  // The practice page (/questions-test) ends on its own screen; nothing is saved.
+  const [practiceDone, setPracticeDone] = useState(false)
   const items = itemsFor(step, answers)
   const rawSub = pos.step === step ? pos.sub : 0
   const sub = rawSub === 'end' ? items.length - 1 : Math.max(0, Math.min(rawSub, items.length - 1))
@@ -320,7 +323,10 @@ export default function Intake({ preview = false, previewReflections = null }) {
     }
 
     if (preview) {
-      if (step > WAYOUT_TOTAL_SCREENS) { navigate(`${WAYOUT_BASE}/preview`); return }
+      if (step > WAYOUT_TOTAL_SCREENS) {
+        if (practice) { setPracticeDone(true); return }
+        navigate(`${WAYOUT_BASE}/preview`); return
+      }
       setStep(step + 1)
       return
     }
@@ -367,19 +373,21 @@ export default function Intake({ preview = false, previewReflections = null }) {
     setStep(s => Math.max(0, s - 1))
   }
 
-  /** Next question in this step, or the step's own Next on its last one. */
+  /** Next screen in this step, or the step's own Next on its last one. */
   function advance() {
-    const cur = items[sub]
-    if (!cur) return next()
-    const f = cur.field
-    const lastOfField = f.kind !== 'score' || cur.item === f.options.length - 1
-    if (lastOfField) {
-      if (!isAnswered(f, answers[f.key])) { setErrors({ [f.key]: f.emptyMessage ?? 'Add an answer.' }); return }
-      if (!nudged.current.has(f.key) && isThin(f, answers[f.key])) {
-        nudged.current.add(f.key)
-        setNudges({ [f.key]: f.nudgeMessage })
-        return
+    const card = items[sub]
+    if (!card) return next()
+    const isScore = card.fields[0].kind === 'score'
+    const lastOfScore = !isScore || card.item === card.fields[0].options.length - 1
+    if (lastOfScore) {
+      const missing = {}
+      for (const f of card.fields) if (!isAnswered(f, answers[f.key])) missing[f.key] = f.emptyMessage ?? 'Add an answer.'
+      if (Object.keys(missing).length) { setErrors(missing); return }
+      const thin = {}
+      for (const f of card.fields) {
+        if (!nudged.current.has(f.key) && isThin(f, answers[f.key])) { nudged.current.add(f.key); thin[f.key] = f.nudgeMessage }
       }
+      if (Object.keys(thin).length) { setNudges(thin); return }
     }
     setErrors({}); setNudges({})
     if (sub < items.length - 1) { setPos({ step, sub: sub + 1 }); return }
@@ -418,10 +426,27 @@ export default function Intake({ preview = false, previewReflections = null }) {
     )
   }
 
+  if (practiceDone) {
+    return (
+      <WayoutShell wide>
+        <div className="wayout__q2">
+          <div className="wayout__q2screen wayout__q2end">
+            <div className="wayout__q2burst" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+            </div>
+            <h1>That’s everything{answers.name ? `, ${answers.name}` : ''}.</h1>
+            <p className="wayout__q2hint">On the real page this is where you sign up and your plan gets built. This was the practice page, so nothing was saved.</p>
+          </div>
+        </div>
+      </WayoutShell>
+    )
+  }
+
   // ── The question on screen ──────────────────────────────────────────────
   const sheet = sheetRows(answers, step)
-  const cur = items[sub]
-  const f = cur.field
+  const card = items[sub]
+  const f = card.fields[0]
+  const group = card.fields.length > 1
   const isOpening = step === 0
   const isOpen = step > WAYOUT_TOTAL_SCREENS
   // The reflection written from the PREVIOUS screen, shown on this screen's first question.
@@ -429,12 +454,15 @@ export default function Intake({ preview = false, previewReflections = null }) {
   const reflection = !isOpening && sub === 0 && prev ? reflections[prev.id] : null
   const from = parseFloat(intakeProgress(step)), to = parseFloat(intakeProgress(step + 1))
   const progress = `${Math.min(100, from + (to - from) * (sub / Math.max(1, items.length)))}%`
-  const autoMoves = f.kind === 'choice' || f.kind === 'score'
+  // A single tap answers and moves on only when it is the only question on screen.
+  const autoMoves = !group && (f.kind === 'choice' || f.kind === 'score')
+  const allOptional = card.fields.every(x => !x.required)
   const cta = isOpening ? WAYOUT_OPENING.cta : isOpen ? WAYOUT_OPEN.cta : 'Next'
 
   return (
     <WayoutShell wide signIn={isOpening}>
       <div className="wayout__q2">
+        {practice && <p className="wayout__q2test">Practice page · nothing is saved</p>}
         <div className="wayout__q2top">
           <button type="button" className="wayout__q2back" onClick={goBack} disabled={isOpening} aria-label="Back">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
@@ -455,18 +483,28 @@ export default function Intake({ preview = false, previewReflections = null }) {
             </>
           ) : (
             <>
-              <p className="wayout__q2kicker">{f.kicker}</p>
-              <h1>{f.labelFor?.(answers) ?? f.label}</h1>
+              {/* A shared screen's title already says the topic. */}
+              {!card.title && <p className="wayout__q2kicker">{f.kicker}</p>}
+              <h1>{card.title ?? f.labelFor?.(answers) ?? f.label}</h1>
             </>
           )}
-          {f.hint && <p className="wayout__q2hint">{f.hint}</p>}
+          {!group && f.hint && <p className="wayout__q2hint">{f.hint}</p>}
           {(answers._carried ?? []).includes(f.key) && (
             <p className="wayout__q2carried">From your first answers. Add anything they missed.</p>
           )}
-          <Answer field={f} item={cur.item} value={answers[f.key]} set={v => setValue(f.key, v)} region={answers.region}
-            onPick={() => { tick(); buzz(); setTimeout(() => advanceRef.current?.(), 260) }} onEnter={advance} />
-          {errors[f.key] && <p className="wayout__q2err" role="alert">{errors[f.key]}</p>}
-          {nudges[f.key] && <p className="wayout__q2nudge" role="status">{nudges[f.key]}</p>}
+          {card.fields.map((x, i) => (
+            <div key={x.key} className={group ? 'wayout__q2part' : undefined}>
+              {/* On a shared screen each question gets its own small heading,
+                  except the first when it is already the screen's heading. */}
+              {group && (card.title || i > 0) && <h2 className="wayout__q2sub">{x.labelFor?.(answers) ?? x.label}</h2>}
+              {group && x.hint && <p className="wayout__q2hint is-sub">{x.hint}</p>}
+              <Answer field={x} item={card.item} value={answers[x.key]} set={v => setValue(x.key, v)} region={answers.region}
+                onPick={autoMoves ? () => { tick(); buzz(); setTimeout(() => advanceRef.current?.(), 260) } : () => buzz()}
+                onEnter={advance} compact={group} focus={i === 0} />
+              {errors[x.key] && <p className="wayout__q2err" role="alert">{errors[x.key]}</p>}
+              {nudges[x.key] && <p className="wayout__q2nudge" role="status">{nudges[x.key]}</p>}
+            </div>
+          ))}
           {errors._save && <p className="wayout__q2err" role="alert">{errors._save}</p>}
         </div>
 
@@ -474,7 +512,7 @@ export default function Intake({ preview = false, previewReflections = null }) {
           {!autoMoves && (
             <button type="button" className="wayout__q2go" onClick={() => { if (!isOpening) tick(); advance() }} disabled={saving}>{cta}</button>
           )}
-          {(!f.required || f.kind === 'score') && (
+          {(allOptional || f.kind === 'score') && (
             <button type="button" className="wayout__q2skip" onClick={skip} disabled={saving}>{f.kind === 'score' ? 'Skip this one' : 'Skip'}</button>
           )}
           {isOpening && <p className="wayout__q2fine">{timeLine()} {priceShort()}</p>}
@@ -503,14 +541,24 @@ export default function Intake({ preview = false, previewReflections = null }) {
   )
 }
 
-/** The questions of one step, in order: hidden ones left out, plain wording on,
- *  and each 1 to 10 item its own question. */
+/** The screens of one step, in order: hidden questions left out, plain
+ *  wording on, quick related questions sharing a screen (GROUPS), and each
+ *  1 to 10 item of an older score field its own screen. */
 function itemsFor(step, answers) {
-  const fields = step === 0 ? [WAYOUT_OPENING.field]
+  const fields = (step === 0 ? [WAYOUT_OPENING.field]
     : step > WAYOUT_TOTAL_SCREENS ? [WAYOUT_OPEN.field]
-    : visibleFields(WAYOUT_SCREENS[step - 1], answers)
-  return fields.map(plainField)
-    .flatMap(f => (f.kind === 'score' ? f.options.map((_, i) => ({ field: f, item: i })) : [{ field: f }]))
+    : visibleFields(WAYOUT_SCREENS[step - 1], answers)).map(plainField)
+  const cards = []
+  const done = new Set()
+  for (const f of fields) {
+    if (done.has(f.key)) continue
+    if (f.kind === 'score') { f.options.forEach((_, i) => cards.push({ fields: [f], item: i })); continue }
+    const g = groupOf(f.key)
+    const members = g ? fields.filter(x => g.keys.includes(x.key)) : [f]
+    members.forEach(x => done.add(x.key))
+    cards.push({ fields: members, title: members.length > 1 ? g?.title : null })
+  }
+  return cards
 }
 
 /**

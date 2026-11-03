@@ -4520,8 +4520,11 @@ like an immovable, never a verdict you announce.
   that they tried it and saying what would be different this time. Most attempts
   fail on the setup rather than the idea, and saying which is often the single
   most useful line on the page.
-- "tradeRank" — what they would give up FIRST, in their order. Never build a
-  plan around trading something they ranked last.
+- "protect" — what they said they would protect even if it slowed things down
+  (asked from 2 Nov 2026). Never build a move that costs one of these. If it
+  truly cannot be avoided, say so plainly and offer the slower way that keeps it.
+- "tradeRank" — older answers: how much each of those mattered, scored 1 to 10.
+  Never build a plan around trading something they scored high.
 - "worstVersion" — the floor they already told you they would accept. If your
   plan is worse than that, it is the wrong plan.
 - "tuesday" and "fromToward" — the destination in their own words. The headline
@@ -4578,11 +4581,11 @@ arrangement.
 - Blank or "doesn't apply" means nothing at all. Do not infer, do not wonder,
   and never ask about it in the plan.
 
-⭐ "tradeRank" now includes their health, time with the people they love, and a
+⭐ "protect" (and "tradeRank" in older answers) includes their health, time with the people they love, and a
 community they belong to, alongside comfort, status and savings. This is the
 only question that asks what a life is FOR, so read it that way. Someone who
-puts status above their health has told you something no money question could,
-and a plan that trades away what they ranked LAST is the wrong plan however
+protects status and not their health has told you something no money question
+could, and a plan that trades away what they protected is the wrong plan however
 well the arithmetic works.
 
 🔴 WHICH DIRECTION ARE THEY CLOSING THE GAP FROM
@@ -4609,7 +4612,8 @@ take first.
 - "Less — a simpler life", "More time", "To be somewhere else" — closed by
   NEEDING LESS, and a side income is usually the wrong answer for them.
 - Both at once: the direction is decided by "goalFirst" and by what they said
-  they would give up in "tradeRank". If time is anywhere in the list, no move
+  they would protect in "protect" (or scored high in "tradeRank"). If time with
+  the people they love is protected, no move
   may spend more hours than they told you they have. Some
   of these people can already afford the life they want and have never had the
   arithmetic done in front of them. Say so if it is true: it is the most useful

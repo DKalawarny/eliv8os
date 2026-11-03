@@ -559,6 +559,9 @@ export const WAYOUT_SCREENS = [
         kind: 'number',
         label: 'Does anyone else in your home bring in money? How much a month?',
         hint: 'Leave it blank if it is only you.',
+        // ⭐ 2 Nov 2026 (Daniel: "can you get the same results with cutting more
+        // questions?"): a single person's answer is always "no one".
+        showIf: a => !!a.relationship && a.relationship !== 'single',
         required: false,
       },
       {
@@ -587,6 +590,9 @@ export const WAYOUT_SCREENS = [
         // number is enough to turn "you will need less" into a figure, and
         // asking for a breakdown here is how somebody abandons a form.
         key: 'housingCost',
+        // ⭐ 2 Nov 2026: only asked of someone who said they could move. It is
+        // there to price a move; for anybody tied down it is a question with no use.
+        showIf: a => (a.immovables ?? []).some(x => (x?.key ?? x) === 'nothing'),
         kind: 'number',
         label: 'Of what you pay each month, how much is for your home?',
         hint: 'Rent or mortgage plus property tax, insurance, heat and hydro.',
@@ -673,24 +679,18 @@ export const WAYOUT_SCREENS = [
     reflectAfter: true,
     fields: [
       {
-        // 🔴 Daniel: "make this a ranking system 1-10 by number, not arrows —
-        // and what is Space?" Arrows on nine items is nine rounds of nudging,
-        // and one-word labels meant people were ranking things they had to
-        // guess the meaning of. Scoring each one is faster, allows ties, and
-        // says something an ordering cannot: that two of them matter enormously
-        // and the rest barely register.
-        key: 'tradeRank',
-        kind: 'score',
-        label: 'How much does each of these matter to you? Score the ones you care about.',
-        hint: 'You do not have to score them all. A few honest ones are enough.',
+        // ⭐⭐ 2 NOV 2026: ONE TAP SCREEN, NOT NINE SCORES. Daniel had asked for
+        // 1 to 10 scores ("not arrows"), and on the one-question-per-screen
+        // redesign it became nine screens; asked whether the plan could get the
+        // same result with fewer questions, he agreed to this. The plan only ever
+        // used the scores to know what not to trade away, and that is exactly
+        // what this asks. Older plans keep `tradeRank` and are still read.
+        key: 'protect',
+        kind: 'chips',
+        label: 'Which of these would you protect, even if it slowed things down?',
+        hint: 'Tap any. Your plan will not trade these away.',
         required: true,
-        emptyMessage: 'Put them in an order, even a rough one.',
-        // 🔴 THIS LIST USED TO BE SIX MATERIAL THINGS — comfort, space,
-        // stability, proximity, status, savings. The single question in the
-        // whole product about what someone actually values offered a menu of
-        // money and comfort, on a product whose point is that a life is worth
-        // more than its income. Someone who ranks status above their health has
-        // told us something no money question could.
+        emptyMessage: 'Tap at least one.',
         options: [
           { key: 'comfort', label: 'Comfort, the standard of living you’re used to' },
           { key: 'space', label: 'Space: room in the house, a yard, somewhere to work' },
@@ -814,22 +814,11 @@ export const WAYOUT_SCREENS = [
         nudge: true,
         nudgeMessage: 'Say a bit more if you can. The whole plan aims at this one, so the more of the day you describe, the more the plan is yours.',
       },
-      {
-        key: 'fiveYears',
-        kind: 'text',
-        label: 'And five years from now?',
-        hint: 'Rougher is fine. It keeps the first year from pointing the wrong way.',
-        placeholder: 'Running my own crew. Home by four. Not renting any more.',
-        required: false,
-      },
-      {
-        key: 'tenYears',
-        kind: 'text',
-        label: 'Ten years?',
-        hint: 'The far end of it. What all of this is actually for.',
-        placeholder: 'Kids through school, house paid off, working because I want to.',
-        required: false,
-      },
+      /* ⭐ `fiveYears` and `tenYears` LEFT ON 2 NOV 2026 (Daniel: "can you get
+         the same results with cutting more questions?"). The plan aims at the
+         one-year day; the longer arc was read only as "never contradict it",
+         and the open box at the end catches anyone for whom it matters. Older
+         answers that carry them are still read. */
       /* ⚠️ `horizon` ("how long before you want to be there?") LEFT THIS SCREEN
          ON 9 OCT. With the ladder the rungs ARE the timing, and a 6m/1y/3y/5y
          pick under "a year from now" asked the same thing twice and could

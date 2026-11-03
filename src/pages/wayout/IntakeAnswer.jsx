@@ -14,9 +14,21 @@ import { currencyFor } from '../../lib/wayout/currency'
 // Savings is a pot, not a monthly amount; only these get "a month".
 const MONTHLY = new Set(['takeHome', 'mustPay', 'householdTakeHome', 'housingCost'])
 
-export function Answer({ field, item, value, set, region, onPick, onEnter }) {
+export function Answer({ field, item, value, set, region, onPick, onEnter, compact = false, focus = true }) {
   const [custom, setCustom] = useState('')
   const [adding, setAdding] = useState(false)
+
+  if (field.kind === 'choice' && compact) {
+    // On a shared screen a choice is a row of chips, so three quick questions fit.
+    return (
+      <div className="wayout__q2chips">
+        {field.options.map(o => (
+          <button key={o.key} type="button" className={`wayout__q2chip${value === o.key ? ' is-on' : ''}`}
+            onClick={() => { set(o.key); onPick() }}>{o.label}</button>
+        ))}
+      </div>
+    )
+  }
 
   if (field.kind === 'choice') {
     return (
@@ -79,7 +91,7 @@ export function Answer({ field, item, value, set, region, onPick, onEnter }) {
             if (label) set([...picked.filter(x => !exclusive.has(x.key ?? x)), { key: `custom-${label.toLowerCase()}`, label, custom: true }])
             setCustom(''); setAdding(false)
           }}>
-            <input className="wayout__q2field" autoFocus value={custom} onChange={e => setCustom(e.target.value)} placeholder="Type it here" />
+            <input className="wayout__q2field" autoFocus={focus} value={custom} onChange={e => setCustom(e.target.value)} placeholder="Type it here" />
             <button type="submit" className="wayout__q2go">Add</button>
           </form>
         ) : <button type="button" className="wayout__q2chip is-add" onClick={() => setAdding(true)}>+ Add your own</button>)}
@@ -91,7 +103,7 @@ export function Answer({ field, item, value, set, region, onPick, onEnter }) {
     return (
       <div className="wayout__q2money">
         <span>{currencyFor(region).symbol}</span>
-        <input inputMode="decimal" placeholder="0" value={value ?? ''} autoFocus
+        <input inputMode="decimal" placeholder="0" value={value ?? ''} autoFocus={focus}
           onChange={e => set(e.target.value.replace(/[^0-9.]/g, ''))}
           onKeyDown={e => { if (e.key === 'Enter') onEnter() }} />
         {MONTHLY.has(field.key) && <em>a month</em>}
@@ -106,7 +118,7 @@ export function Answer({ field, item, value, set, region, onPick, onEnter }) {
   if (field.kind === 'shorttext') {
     return (
       <div className="wayout__q2mic">
-        <input className="wayout__q2field" value={value ?? ''} placeholder={field.placeholder ?? ''} autoFocus
+        <input className="wayout__q2field" value={value ?? ''} placeholder={field.placeholder ?? ''} autoFocus={focus}
           onChange={e => set(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') onEnter() }} />
         {mic}
       </div>

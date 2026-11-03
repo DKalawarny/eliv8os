@@ -86,20 +86,18 @@ export const PLAIN = {
     options: { vehicle: 'My vehicle', gym: 'Gym or hobbies', none: 'Nothing, I’d miss all of it' },
   },
 
-  tradeRank: {
-    kicker: 'What’s important', label: 'How important is each of these to you?', hint: null,
+  protect: {
+    kicker: 'What’s important', label: 'Which of these would you protect, even if it slowed things down?', hint: 'Tap any. Your plan won’t trade these away.',
     options: {
-      comfort: 'Keeping the lifestyle you have now', space: 'Keeping a home with plenty of space', stability: 'Knowing how much money is coming in each month',
-      status: 'What other people think', savings: 'Keeping your savings untouched', 'family-proximity': 'Living close to family',
-      'time-with-people': 'Time with the people you love', health: 'Looking after your health', community: 'Staying part of your community',
+      comfort: 'The lifestyle you have now', space: 'A home with plenty of space', stability: 'Knowing how much money is coming in each month',
+      status: 'How it looks to other people', savings: 'Your savings', 'family-proximity': 'Living close to family',
+      'time-with-people': 'Time with the people you love', health: 'Your health', community: 'Your community',
     },
   },
   alreadyTried: { kicker: 'What’s important', label: 'What have you tried already, and how did it go?', hint: '“Nothing yet” is a fine answer.' },
   refuse: { kicker: 'What’s important', label: 'Is there anything you won’t do, even if it would work?', hint: null },
 
   tuesday: { kicker: 'Your goal', label: 'Picture a year from now. What does a normal day look like?', hint: 'Where are you, what are you doing, and who are you with?' },
-  fiveYears: { kicker: 'Your goal', label: 'And in five years?', hint: 'Rough is fine.' },
-  tenYears: { kicker: 'Your goal', label: 'And in ten?', hint: 'What is all of this for?' },
   yearShape: {
     kicker: 'Your goal', label: 'Would you rather earn the same every month, or more in busy seasons?', hint: null,
     options: { steady: 'The same every month', seasonal: 'Busy seasons, then time off', lumpy: 'One big payday I make last', dontmind: 'I don’t mind' },
@@ -132,3 +130,26 @@ export function plainField(field) {
     groups: field.groups?.map((g, i) => ({ ...g, label: p.groups?.[i] ?? g.label, options: relabel(g.options) })),
   }
 }
+
+/**
+ * ⭐ QUICK QUESTIONS SHARE A SCREEN (Daniel, 2 Nov 2026: "would it be worth
+ * having some quick questions on the same page so it doesn't seem like as many
+ * pages"). Only quick, related ones: short taps and small boxes on one topic.
+ * Anything that needs thought keeps its own screen. A follow-up that only
+ * applies (which faith, kids' ages) appears on the same screen the moment it
+ * applies. `title` is the screen's question; without one, the first question
+ * is the heading. Every group sits inside one step, so saving is unchanged.
+ */
+export const GROUPS = [
+  { keys: ['region', 'locationText'], title: 'Where do you live?' },
+  { keys: ['immovables', 'immovablesNote'] },
+  { keys: ['faith', 'faithNote', 'health', 'healthNote'], title: 'Two quick ones' },
+  { keys: ['name', 'age', 'workType'], title: 'A bit about you' },
+  { keys: ['relationship', 'kidsAges'] },
+  { keys: ['timeEaters', 'hoursPerWeek'] },
+  { keys: ['takeHome', 'mustPay', 'householdTakeHome'], title: 'Your money each month' },
+  { keys: ['savings', 'debt'], title: 'Savings and debt' },
+  { keys: ['yearShape', 'enough'], title: 'How you’d like to earn' },
+  { keys: ['goalType', 'goalFirst'] },
+]
+export const groupOf = key => GROUPS.find(g => g.keys.includes(key)) ?? null
