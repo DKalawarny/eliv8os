@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import WayoutShell from './WayoutShell'
 import RouteMap from './RouteMap'
-import { supabase } from '../../lib/supabase'
+import { supabase, setRemember } from '../../lib/supabase'
 import { parkPendingAcceptance } from '../../lib/terms'
 import { clearDraft, hasHandoff } from '../../lib/wayout/draft'
 import { WAYOUT_BASE, WAYOUT_INTAKE, WAYOUT_NAME_TITLE, WAYOUT_TOTAL_TIME} from '../../lib/wayout/brand'
@@ -95,6 +95,11 @@ export default function Enter() {
   const [password, setPassword] = useState('')
   const [agreed, setAgreed]     = useState(false)
   const [show, setShow]         = useState(false)
+  // ⭐ "Keep me signed in" (Daniel, 2 Nov: "we need a remember me at the
+  // password login"). Same switch as Eliv8's login (lib/supabase.js): ticked
+  // keeps the session after the browser closes, unticked ends it with the
+  // browser, for a shared or library computer.
+  const [remember, setRemember_] = useState(true)
   const [busy, setBusy]         = useState(false)
   const [error, setError]       = useState('')
   // ⚠️ Guidance is not an error. Rendering "you already have an account" in
@@ -130,6 +135,7 @@ export default function Enter() {
     clearMessages()
     if (!email.trim()) { setError('Type your email above first.'); return }
     setBusy(true)
+    setRemember(remember)   // the link signs them in later, in this browser
     try {
       const { error: e } = await supabase.auth.signInWithOtp({
         email: email.trim(),
@@ -192,6 +198,7 @@ export default function Enter() {
         if (data.session) navigate(next, { replace: true })
         else setSent(true)                  // confirmation email path
       } else {
+        setRemember(remember)   // before sign-in, so the session is written to the right place
         const { error: e2 } = await supabase.auth.signInWithPassword({ email, password })
         if (e2) throw e2
         /**
@@ -328,6 +335,18 @@ export default function Enter() {
                 {show ? 'Hide' : 'Show'}
               </button>
             </div>
+
+            {mode === 'in' && (
+              <label className="wayout__consent">
+                <input
+                  id="wayout-remember"
+                  type="checkbox"
+                  checked={remember}
+                  onChange={e => setRemember_(e.target.checked)}
+                />
+                <span>Keep me signed in. Untick this on a shared computer.</span>
+              </label>
+            )}
 
             {/* ⚠️ Consent is required to create an account and the submit stays
                 disabled until it is ticked — the same rule Eliv8 signup follows,
