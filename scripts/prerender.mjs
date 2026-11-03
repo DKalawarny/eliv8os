@@ -100,6 +100,14 @@ const ROUTES = [
   { path: '/hello',  titleContains: 'Unstuck Map' },
   { path: '/stuck',  titleContains: 'Being stuck, in specific situations' },
   { path: '/why',    titleContains: 'Why Unstuck Map exists' },
+  // ⭐ 2 Nov 2026. Unstuck's privacy and terms were served from the empty
+  // noindex shell (the files at /privacy and /terms are Eliv8's), so Google's
+  // URL Inspection said "Excluded by noindex" on the privacy page Daniel had
+  // just rewritten. Rendered at the prefixed path, because /privacy here is
+  // Eliv8's; the worker serves these two files at getunstuckmap.com/privacy
+  // and /terms.
+  { path: '/wayout/privacy', titleContains: 'Privacy · Unstuck Map' },
+  { path: '/wayout/terms',   titleContains: 'Terms of use · Unstuck Map' },
   // ⚠️ Generated from the same array the pages render from, exactly as the
   // answer pages are. A situation page added to the content file and forgotten
   // here would ship invisible to the one channel it was written for.

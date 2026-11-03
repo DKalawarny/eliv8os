@@ -80,7 +80,10 @@ export default {
       if (UNSTUCK_FILES[path]) res = await asset(UNSTUCK_FILES[path])
       else if (path === '/') res = await asset('/hello/index.html')
       // 🔴 /terms and /privacy exist as files, and the files are Eliv8 OS's.
-      else if (/^\/(terms|privacy)\/?$/.test(path)) res = await asset('/unstuck-shell.html')
+      // Unstuck's own are prerendered under /wayout/ (scripts/prerender.mjs).
+      else if (/^\/(terms|privacy)\/?$/.test(path)) {
+        res = (await find(`/wayout/${path.replace(/\//g, '')}`)) ?? (await asset('/unstuck-shell.html'))
+      }
       else res = (await find(path)) ?? (await asset('/unstuck-shell.html'))
     } else {
       const cross = eliv8ToUnstuck(path, url.search)
