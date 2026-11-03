@@ -75,6 +75,7 @@ const WayoutIntake     = lazy(() => import('./pages/wayout/Intake'))
 const WayoutPlan       = lazy(() => import('./pages/wayout/Plan'))
 const WayoutPlay       = lazy(() => import('./pages/wayout/Play'))
 const WayoutPath       = lazy(() => import('./pages/wayout/Path'))
+const WayoutIntakeTest = lazy(() => import('./pages/wayout/IntakeTest'))
 const WayoutDone       = lazy(() => import('./pages/wayout/Done'))
 const WayoutChapter    = lazy(() => import('./pages/wayout/Chapter'))
 const WayoutHistory    = lazy(() => import('./pages/wayout/History'))
@@ -431,6 +432,10 @@ export default function App() {
             END, where someone can see what they would be keeping. */}
         <Route path="/wayout"       element={<LazyRoute><WayoutIntake /></LazyRoute>} />
         <Route path="/questions"       element={<LazyRoute><WayoutIntake /></LazyRoute>} />
+        {/* ⭐ Test page for the redesigned questions (2 Nov 2026). Public, not
+            linked anywhere, saves nothing. Becomes /questions once approved. */}
+        <Route path="/wayout/questions-test" element={<LazyRoute><WayoutIntakeTest /></LazyRoute>} />
+        <Route path="/questions-test" element={<LazyRoute><WayoutIntakeTest /></LazyRoute>} />
         <Route path="/wayout/plan"  element={<LazyRoute><RequireWayout><WayoutPlan /></RequireWayout></LazyRoute>} />
         <Route path="/plan"  element={<LazyRoute><RequireWayout><WayoutPlan /></RequireWayout></LazyRoute>} />
         {/* The play-by-play for one move. Same guard as the plan — there is
