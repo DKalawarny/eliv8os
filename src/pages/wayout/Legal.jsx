@@ -20,7 +20,7 @@ import { OPERATOR_LEGAL_NAME, OPERATOR_CONTACT, GOVERNING_PROVINCE, LIABILITY_CA
  * ⚠️ Every claim about data must match what the code does. If a vendor or a
  * data flow changes, this page changes in the same commit.
  */
-export const WAYOUT_LEGAL_UPDATED = '18 October 2026'
+export const WAYOUT_LEGAL_UPDATED = '2 November 2026'
 
 function Section({ title, children }) {
   return (
@@ -75,7 +75,7 @@ export function UnstuckTerms() {
         </Section>
 
         <Section title="7. Changes, ending, and the law that applies">
-          <p>These terms may change as the product does; if they change in a way that matters, you will be asked to agree again. You can stop using {WAYOUT_NAME} and ask us to delete your account at any time. These terms are governed by the laws of {GOVERNING_PROVINCE} and Canada.</p>
+          <p>These terms may change as the product does; if they change in a way that matters, you will be asked to agree again. You can stop using {WAYOUT_NAME} and delete your account at any time from your account page. These terms are governed by the laws of {GOVERNING_PROVINCE} and Canada.</p>
         </Section>
 
         <Section title="8. Contact">
@@ -140,8 +140,39 @@ export function UnstuckPrivacy() {
           <p>If you joined from someone's invite link, they can see that someone joined from it. They see your first name and whether you have made a plan only if you say yes, and you can change that any time. They never see your answers, your numbers or your plan.</p>
         </Section>
 
+        {/* ⭐ 2 Nov 2026. A friend of Daniel's who works with data centres read
+            the site and asked where the information is stored, how it is
+            secured, and whether people can delete their own account. The
+            buttons already existed (Account.jsx); this page still said "email
+            us". Each line below is checked against what is actually true:
+            database in Oregon, encrypted, row-level security on every Unstuck
+            table, daily copies kept 30 days on an encrypted computer
+            (scripts/backup-eliv8.mjs, FileVault on). If any of that changes,
+            this page changes in the same commit. */}
+        <Section title="How it is protected">
+          <ul>
+            <li>Your information is stored in a secure cloud database in the United States (Oregon). It is encrypted while stored and while it travels between you and us.</li>
+            <li>Passwords are never stored as you typed them, only in a scrambled form that cannot be turned back.</li>
+            <li>The database only lets each account read its own plans. Nobody signed in as someone else can reach yours.</li>
+            <li>A copy is made each day so nothing is lost if something breaks. Copies are kept for 30 days on an encrypted computer that only we use.</li>
+            <li>If your information is ever exposed in a way that could harm you, we will tell you and the Privacy Commissioner of Canada as soon as we can.</li>
+          </ul>
+        </Section>
+
+        <Section title="How long we keep it">
+          <p>For as long as you have an account. When you delete it, your plans and answers are removed straight away, and the daily copies that still hold them are gone within 30 days.</p>
+        </Section>
+
         <Section title="Your choices">
-          <p>You can correct your answers from your plan at any time. To get a copy of your information or have your account and everything in it deleted, email <a href={`mailto:${OPERATOR_CONTACT}`}>{OPERATOR_CONTACT}</a>; deletion is done within 30 days.</p>
+          <p>You can correct your answers from your plan at any time. On your <Link to={`${WAYOUT_BASE}/account`}>account page</Link> you can download a copy of everything you have told us, or delete your account and everything in it yourself. You can also email us for either.</p>
+        </Section>
+
+        <Section title="Who is responsible">
+          <p>{OPERATOR_LEGAL_NAME} is responsible for your information and has a privacy officer who answers for it. Questions, requests or complaints: <a href={`mailto:${OPERATOR_CONTACT}`}>{OPERATOR_CONTACT}</a>. We follow Canada’s privacy law (PIPEDA) and British Columbia’s (PIPA). If you are not happy with our answer, you can complain to the Office of the Privacy Commissioner of Canada (<a href="https://www.priv.gc.ca" target="_blank" rel="noreferrer">priv.gc.ca</a>) or, in British Columbia, the Information and Privacy Commissioner (<a href="https://www.oipc.bc.ca" target="_blank" rel="noreferrer">oipc.bc.ca</a>).</p>
+        </Section>
+
+        <Section title="If you live in Europe or the UK">
+          <p>We use your information because you asked us to write your plan (to provide the service) and, for anything optional, because you said yes. You have the right to see, correct, download and delete it, to object to how it is used, and to complain to your local data protection authority. Your information is stored and processed in the United States and Canada.</p>
         </Section>
 
         <p className="wayout__fine"><Link to={`${WAYOUT_BASE}/terms`}>Terms of use →</Link></p>
