@@ -4,7 +4,7 @@ import WayoutShell from './WayoutShell'
 import {
   loadOrCreateSession, loadSessionById, generateMap, countRebuild, insistOn, wantPlaybook, loadProgress,
   askAboutPlan, chooseBetween, savePlanThread, saveAnswers, chapterChain, saveMapKeepingLast, restorePreviousMap,
-  markMoveDone, moveIsOpen, saveMoveNote, WAYOUT_MAX_REBUILDS, enforceMapContract, mapProblems, historyFor, enrichAnswers,
+  markMoveDone, saveMoveNote, WAYOUT_MAX_REBUILDS, enforceMapContract, mapProblems, historyFor, enrichAnswers,
 } from '../../lib/wayout/session'
 import { WAYOUT_MAP_LABEL, WAYOUT_BASE, WAYOUT_INTAKE } from '../../lib/wayout/brand'
 import { editDestination } from '../../lib/wayout/sessionHome'
@@ -970,13 +970,16 @@ export function Map({
   // ⭐ Has any walkthrough actually been opened? That is the line between
   // somebody being sold the paid half and somebody already inside it.
   const hasOpened = (progress?.started?.size ?? 0) > 0
-  const [openCut, setOpenCut] = useState(null)
 
   // ⭐⭐ Their own words on one move. `openNote` is which box is open, `draft` is
   // what is in it. One draft, not one per move — only one box is ever open, and
   // a map of drafts would be state nobody clears.
   const [openNote, setOpenNote] = useState(null)
   const [draft, setDraft] = useState('')
+  // The reveal: which move's full detail is open, and the rest of what the plan heard.
+  const [openMove, setOpenMove] = useState(null)
+  const [seenOpen, setSeenOpen] = useState(false)
+  const firstName = String(answers?.name ?? '').trim().split(/\s+/)[0] || ''
 
   /**
    * ⚠️ TWO OUTCOMES, ONE BOX, AND THE DIFFERENCE IS THE POINT.
@@ -1111,292 +1114,145 @@ export function Map({
           measure is right for a headline and wrong for a page: the fix is to
           put something IN the space, not to stretch the sentence across it.
           The numbers are what belongs there — they are the claim's evidence. */}
-      <div className="wayout__head">
-      <div className="wayout__top">
-        <p className="wayout__who wayout__r" style={at(0.1)}>{WAYOUT_MAP_LABEL}</p>
-        {/* 🔴 THE PLAN'S HEADLINE WAS LOSING ITS YELLOW MARK SILENTLY. The
-            contract drops `highlight` whenever the model's phrase is not an
-            exact substring of the headline it wrote — correct, because a mark
-            that matches nothing renders as a design fault rather than a data
-            one — but the result was a headline with no highlight at all, on the
-            one page the whole product is for. Caught in a console warning
-            during an unrelated run: "[wayout] highlight not found in headline
-            — dropping the mark".
-            ⭐ `derive` is the fallback the walkthrough already uses: mark the
-            instruction and leave the qualifier, from a closed list of joining
-            words, and mark NOTHING when the sentence cannot be read
-            confidently. So a dropped highlight degrades to a derived one and
-            only then to none. */}
-        <h2 className="wayout__r" style={at(0.3)}>
-          <Marked text={map.headline} highlight={map.highlight} derive />
-        </h2>
-        {/* ⭐⭐ THE FIRST THING THEY CAN DO, BEFORE ANY NUMBER. 9 Oct, Daniel's
-            brother read his numbers at night, "almost had a heart attack", and
-            went to bed before he reached the moves. The way out has to arrive
-            before the hole does, so the next open move sits under the headline. */}
-        {!past && nextMove && (
-          <p className="wayout__starthere wayout__r" style={at(0.5)}>
-            <b>{ticked.size ? 'Next' : 'Start here'}</b>
-            <span>{nextMove.title}{nextMove.when ? <em>{nextMove.when}</em> : null}</span>
-          </p>
+      {/* ⭐⭐ THE PLAN AS A REVEAL (Daniel, 2 Nov 2026: "this is what I land on
+          after doing the questions, do you think it fits now?", then the mock-up
+          he reviewed and "look good yes"). The page that pays off fifteen minutes
+          of answers opens on that payoff: their name, the headline, what the
+          plan heard, and ONE next thing to do. Everything the old board did is
+          still here, in the order people need it:
+            reveal → the route and the three moves → their own words for where
+            this goes → progress → where they start → "Something changed?" →
+            the detail, folded → sharing.
+          ⚠️ Nothing below invents a claim: the destination is their own answer,
+          and every line of copy is about the plan, never praise of the person. */}
+      <div className="wayout__plan2">
+      <header className="wayout__p2hero">
+        {past ? (
+          <div className="wayout__pastband">
+            <b>Finished plan</b>
+            <span>This is how you left it. Nothing here can be changed.</span>
+            <Link to={`${WAYOUT_BASE}/plan`}>Back to your current plan →</Link>
+          </div>
+        ) : (
+          <span className="wayout__p2ready">
+            <b aria-hidden="true">✓</b>
+            {ticked.size
+              ? `Welcome back${firstName ? `, ${firstName}` : ''}`
+              : `${firstName ? `${firstName}, your` : 'Your'} plan is ready`}
+          </span>
         )}
-      </div>
-
-      {/* ⭐ The quote and the two numbers are the SETUP — what they said and
-          where they stand. They belong before the plan that answers them, not
-          in a column beside it. They were below the moves for one build and it
-          read backwards: the answer, then the question. */}
-      <div className="wayout__setup">
-      {/* ⭐ Rendered only when the contract check passed — session.js drops the
-          card if the quote is not verbatim in what the person actually typed.
-          A fabricated one takes every other claim on the page down with it. */}
-      {map.seen && (
-        <div className="wayout__seen wayout__r" style={at(0.9)}>
-          {/* ⚠️ <q> inserts its own quotation marks. Typing curly ones as well
-              rendered ““no real skills””. */}
-          {/* ⚠️ The quote is optional now. An unverifiable one is dropped by the
-              contract while the insight survives, so a card can legitimately
-              arrive with no quote at all — rendering an empty <q> printed a pair
-              of bare quotation marks with nothing between them. */}
-          {/* ⚠️ Tidied at RENDER, never in storage — the verbatim guard has already
-              passed on the stored string. See tidyQuote.js for why spelling is
-              deliberately left alone. */}
-          {map.seen.quote && <q>{tidyQuote(map.seen.quote)}</q>}
-          <b>{map.seen.insight}</b>
-        </div>
-      )}
-
-      {Array.isArray(map.stats) && map.stats.length > 0 && (
-        <div className="wayout__starting wayout__r" style={at(1.6)}>
-        {/* ⭐ A STARTING LINE, NOT A VERDICT. The numbers stay exactly as
-            honest; what changes is that they are labelled as where this
-            begins, and that something true and hopeful sits right beside
-            them. Daniel: "something positive beside it… a few moves can make
-            a change to this number". */}
-        <p className="wayout__label">Where you’re starting</p>
-        {/* ⭐⭐ CREDIT BEFORE THE HOLE. Writing every number down is something
-            they DID, and most people never do it. Shown only when the shortfall
-            was worked out from figures they actually gave (tone `hard` comes
-            only from deriveStats), so it can never be said to someone it is not
-            true of; "the debt included" only when they named one. */}
-        {map.stats.some(x => x.tone === 'hard') && (
-          <p className="wayout__credit">
-            You put every number down{String(answers?.debt ?? '').trim() ? ', the debt included' : ''}.
-            Most people never get that far, and it is why your plan can be this specific.
-          </p>
+        {!past && chapter > 1 && (
+          <div className="wayout__chapterband">
+            <b>Chapter {chapter}</b>
+            <span>Built from what actually happened last time.</span>
+            <Link to={`${WAYOUT_BASE}/history`}>See all your progress →</Link>
+          </div>
         )}
-        <div className="wayout__stats">
-          {map.stats.slice(0, 2).map((s, i) => (
-            <div className="wayout__stat" key={i}>
-              <span>{s.label}</span>
-              {/* ⚠️ Only good news counts up. A shortfall spinning up from zero
-                  is a slot machine landing on how far behind you are. */}
-              <b>{s.tone === 'good'
-                ? <CountUp value={Number(s.value) || 0} prefix={s.prefix} suffix={s.suffix} />
-                : <StatNum value={Number(s.value) || 0} prefix={s.prefix} suffix={s.suffix} />}</b>
-              {/* ⚠️ Optional. A figure with no "by when" is a slogan, but an
-                  invented one is worse than none — so it renders only when the
-                  model actually derived it. */}
-              {s.caption && <span className="wayout__statwhen">{s.caption}</span>}
-            </div>
-          ))}
-        </div>
-        <p className="wayout__hopeful">
-          {map.stats.some(x => x.tone === 'good')
-            ? 'You already bring in more than you have to pay each month. Your plan is about what you do with the extra.'
-            : 'You are starting from here, not staying here. The moves below are built to change these numbers, one at a time.'}
-        </p>
-        </div>
-      )}
-
-      </div>
-      </div>
-
-      {/* ⭐⭐ YOUR WAY OUT, IN YOUR WORDS. Daniel, 9 Oct: "planning app isnt
-          really the plan, its suppose to give a way out". The headline names
-          the first rung; this is the whole ladder, verbatim from what they
-          typed, so the moves below read as steps toward something they said.
-          ⚠️ Only when a longer rung exists. A session from before the ladder
-          has `tuesday` as a three year day, and labelling it "In a year" would
-          put words in their mouth. */}
-      {(answers?.fiveYears?.trim() || answers?.tenYears?.trim()) && (
-        <section className="wayout__ladder wayout__r" style={at(2.1)} aria-label="Your way out">
-          <h3 className="wayout__label">Your way out</h3>
-          <ol>
-            {[['In a year', answers.tuesday], ['In five years', answers.fiveYears], ['In ten years', answers.tenYears]]
-              .filter(([, v]) => String(v ?? '').trim())
-              .map(([when, v]) => (
-                <li key={when}><span>{when}</span><p>{tidyQuote(String(v).trim())}</p></li>
-              ))}
-          </ol>
-        </section>
-      )}
-      {/* ⭐⭐ THE WAY INTO THE HISTORY, and only once there is a history to see.
-          On a first plan this link would point at a page that can only say
-          "nothing here yet", which is worse than no link. */}
-      {/* ⭐⭐ ONCE YOU ARE IN A NEW CHAPTER, THE PLAN HAS TO SAY SO. Daniel:
-          "make sure that this new section looks different by colour or
-          something, making it distinguishable."
-
-          The door into a chapter is already the one dark screen in the product —
-          but the plan it opens onto looked identical to the first one, so the
-          only place the change was visible was the screen you pass through. This
-          is the marker that stays.
-
-          ⚠️ SUN, NOT GREEN, AND THAT IS THE WHOLE POINT. Green is the product's
-          working colour — every tick, every button, every move. The single
-          accent is reserved (the now-marker, the seen card, the final button),
-          and a chapter is exactly the kind of thing it is reserved FOR: rare,
-          structural, and about where you are rather than what to do.
-
-          ⚠️ It is a BAND, not a badge in a corner. A chapter is a fact about the
-          whole page, so it sits across the top of it. */}
-      {/* ⭐⭐ THE ONLY THING THAT CHANGES ON A PAST CHAPTER IS THAT IT SAYS SO.
-          Everything else is exactly as they left it — the same board, the same
-          ticks — because the point of coming back is seeing what you actually
-          did, not a summary of it. */}
-      {past && (
-        <div className="wayout__pastband wayout__r" style={at(2.2)}>
-          <b>Finished plan</b>
-          <span>This is how you left it. Nothing here can be changed.</span>
-          <Link to={`${WAYOUT_BASE}/plan`}>Back to your current plan →</Link>
-        </div>
-      )}
-      {!past && chapter > 1 && (
-        <div className="wayout__chapterband wayout__r" style={at(2.3)}>
-          <b>Chapter {chapter}</b>
-          <span>Built from what actually happened last time.</span>
-          <Link to={`${WAYOUT_BASE}/history`}>See all your progress →</Link>
-        </div>
-      )}
-      {/* ⭐⭐ WHERE THEY ARE, AT A GLANCE. Daniel, 2 Oct: "showing the milestones
-          on each person's page — something that shows their progress." Evidence,
-          never praise: what is done and when, which gate is passed, what is next.
-          ⚠️ No percentages, rings, badges or streaks — ever. */}
-      {!past && Array.isArray(map.moves) && map.moves.length > 0 && (
-        <Progress moves={map.moves} ticked={ticked} doneAt={progress?.doneAt ?? {}} earlier={earlier} style={at(2.3)} />
-      )}
-      <h3 className="wayout__label wayout__r" style={at(2.4)}>Your three moves, in order</h3>
-      {/* ⭐⭐ SAID AT THE TOP, WHERE PEOPLE READ. Daniel: "maybe we market it so
-          it shows that this is a suggested plan, up to you to do as you wish,
-          not legal advice."
-          ⚠️ The disclaimer at the foot is the legal sentence and it stays. This
-          is the HONEST one, and it belongs beside the moves rather than under
-          them — fine print at the bottom is what somebody scrolls past, and a
-          thing you only say where it will not be read is a thing you have not
-          said. It is also simply true: the order is our best reading of their
-          answers, and every part of it can be changed by them. */}
-      <p className="wayout__suggested wayout__r" style={at(2.45)}>
-        This is our suggestion, based on your answers. You can change any of it.
-      </p>
-      {/* ⭐ KEEP IT WHERE YOU WILL SEE IT. A plan on a fridge, or in front of a
-          partner, does more than a plan in a browser tab — and a reminder in
-          their own calendar brings them back without us emailing anyone. */}
-      {!past && (
-        <p className="wayout__planactions wayout__r" style={at(2.5)}>
-          <button type="button" className="wayout__again" onClick={() => window.print()}>Print or save as PDF</button>
-          {Array.isArray(map.moves) && map.moves.length > 0 && (
-            <button type="button" className="wayout__again" onClick={() => remindMe(map.moves, ticked)}>Remind me in a week</button>
-          )}
-        </p>
-      )}
-
-      {/* ⭐⭐ THE PINNED ROUTE. Daniel picked it out of four shapes: "i like the
-          fun pin board but the checking off of steps and the progress marker".
-          Notes keep the board's character; the string keeps the ORDER, which is
-          the product. See wayout.css for why the string is a fixed-height svg
-          and why the grid gaps are percentages. */}
-      {!past && (
-        <VersionSwitch
-          thread={thread} liveMap={liveMap} disabled={rebuilding || locked}
-          onSwitch={onSwitchVersion ?? undefined} onRemove={onRemoveVersion ?? undefined}
-          onChoose={onChoose ?? undefined} onGoWith={onGoWith ?? undefined}
-          choosing={choosing} chooseErr={chooseErr}
-        />
-      )}
-      <div className="wayout__string wayout__r" style={at(2.6)}>
-        <svg className="wayout__twine" viewBox="0 0 900 74" preserveAspectRatio="none" aria-hidden="true">
-          <path className="slack" pathLength="100" d="M98 48 Q 274 72 450 48 Q 626 72 802 48" />
-          <path
-            className="taut"
-            pathLength="100"
-            d="M98 48 Q 274 72 450 48 Q 626 72 802 48"
-            strokeDasharray={`${ticked.size === 0 ? 0 : ticked.size === 1 ? 50 : 100} 100`}
+        {/* The yellow mark is kept, with the `derive` fallback (see Marked). */}
+        <h1 className="wayout__p2title"><Marked text={map.headline} highlight={map.highlight} derive /></h1>
+        {!past && (
+          <VersionSwitch
+            thread={thread} liveMap={liveMap} disabled={rebuilding || locked}
+            onSwitch={onSwitchVersion ?? undefined} onRemove={onRemoveVersion ?? undefined}
+            onChoose={onChoose ?? undefined} onGoWith={onGoWith ?? undefined}
+            choosing={choosing} chooseErr={chooseErr}
           />
-        </svg>
+        )}
+        {/* What the plan heard. Two sentences, the rest a tap away: a long
+            paragraph above the button is where people stop reading. */}
+        {map.seen && (
+          <div className="wayout__p2seen">
+            {map.seen.quote && <q>{tidyQuote(map.seen.quote)}</q>}
+            {map.seen.insight && (
+              <p>
+                {seenOpen ? map.seen.insight : leadSentences(map.seen.insight, 2)}
+                {!seenOpen && leadSentences(map.seen.insight, 2) !== map.seen.insight && (
+                  <button type="button" className="wayout__p2link" onClick={() => setSeenOpen(true)}>Read more</button>
+                )}
+              </p>
+            )}
+          </div>
+        )}
+        {!past && (
+          <div className="wayout__p2cta">
+            <PlaybookCta onOpen={onOpenPlaybook} onPath={onOpenPath} hasOpened={hasOpened} />
+            {/* One concrete first thing; a start you can picture is a start you make. */}
+            {nextMove && <p className="wayout__p2first">{ticked.size ? 'Next' : 'First up'}: <b>{nextMove.title}</b></p>}
+            {/* The honest line, beside the button (Daniel: "a suggested plan, up
+                to you"). Also why people dare to start: nothing here is final. */}
+            <p className="wayout__p2calm">This is our suggestion, based on your answers. You can change any of it.</p>
+            <a className="wayout__p2more" href="#wayout-whole">See the whole plan ↓</a>
+          </div>
+        )}
+      </header>
 
-        <div className="wayout__notes" id="wayout-moves">
-          {map.moves?.map((m, i) => {
-            const order = i + 1
-            const isDone = ticked.has(order)
-            // ⭐ Every move is open (Daniel, 31 Oct 2026: never block somebody
-            // unless it truly has to be done first; see lib/wayout/path.js).
-            // "You are here" stays on the first one not done, as a suggestion.
-            const isOpen = moveIsOpen(order, ticked)
-            const here = map.moves.findIndex((_, k) => !ticked.has(k + 1)) + 1
-            const state = isDone ? 'done' : (order === here ? 'now' : 'open')
-            const theirs = moveNotes?.[order]
+      {Array.isArray(map.moves) && map.moves.length > 0 && (
+        <>
+          {/* ⭐ A route, not three separate tasks: today, each move, and their
+              year. Lights up green as moves are marked done. */}
+          <div className="wayout__p2route" aria-hidden="true">
+            <span className="is-now">Today</span>
+            {map.moves.map((_, i) => (
+              <Fragment key={i}>
+                <i className={ticked.size > i ? 'is-lit' : ''} />
+                <span className={`is-m${i + 1}${ticked.has(i + 1) ? ' is-done' : ''}`}>{ticked.has(i + 1) ? '✓' : i + 1}</span>
+              </Fragment>
+            ))}
+            <i className={allTicked ? 'is-lit' : ''} />
+            <span className="is-end">{String(answers?.tuesday ?? '').trim() ? 'Your year' : 'Done'}</span>
+          </div>
 
-            return (
-              <Fragment key={order}>
-                <div className={`wayout__note wayout__note--${order} wayout__note--${state}`}>
-                  {/* The pin is the MARKER and a second way to tick. It is never
-                      the only way — see the note in wayout.css. */}
-                  <button
-                    type="button"
-                    className="wayout__pin"
-                    onClick={() => toggle(i)}
-                    aria-pressed={isDone}
-                    aria-label={`Mark move ${order} done`}
-                  >
-                    <svg viewBox="0 0 16 16" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 8.5l3 3 7-7" />
-                    </svg>
-                  </button>
-                  {state === 'now' && <span className="wayout__here">You are here</span>}
-
-                  <b>Move {order} · {m.when}</b>
-                  <h4>{m.title}</h4>
-                  <p>{m.detail}{m.season ? ` ${m.season}` : ''}</p>
-
-                  <div className="wayout__acts">
-                    {/* ⭐ "Show me how" is the paywall. When payments go live it
-                        carries the price — see the button lower down. A locked
-                        move says what WOULD open it rather than just "locked":
-                        the move is not hidden, the walkthrough is not open. */}
-                    <button
-                      type="button"
-                      className="wayout__go"
-                      disabled={!isOpen}
-                      onClick={() => isOpen && onOpenPlaybook?.(order)}
-                    >
-                      {isOpen
-                        ? (WAYOUT_PAYMENTS_LIVE && order === 1 ? `Show me how, ${WAYOUT_PRICE_FULL}` : 'Show me how')
-                        : `Opens when move ${order - 1} is done`}
-                    </button>
-                    {isOpen && (
-                      <button type="button" className="wayout__mark" onClick={() => toggle(i)} aria-pressed={isDone}>
-                        <i>
-                          <svg viewBox="0 0 16 16" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 8.5l3 3 7-7" />
-                          </svg>
-                        </i>
-                        {isDone ? 'Done' : 'Mark done'}
+          <div className="wayout__p2moves" id="wayout-moves">
+            {map.moves.map((m, i) => {
+              const order = i + 1
+              const isDone = ticked.has(order)
+              const theirs = moveNotes?.[order]
+              const full = `${m.detail ?? ''}${m.season ? ` ${m.season}` : ''}`
+              const short = leadSentences(full, 1)
+              return (
+                <article key={order} className={`wayout__p2move is-m${order}${isDone ? ' is-done' : ''}`}>
+                  <span className="wayout__p2num">{isDone ? '✓' : order}</span>
+                  {m.when && <p className="wayout__p2when">{m.when}</p>}
+                  <h3>{m.title}</h3>
+                  <p className="wayout__p2detail">
+                    {openMove === order ? full : short}
+                    {openMove !== order && short !== full && (
+                      <button type="button" className="wayout__p2link" onClick={() => setOpenMove(order)}>More</button>
+                    )}
+                  </p>
+                  {m.gate && (
+                    <div className="wayout__p2gate">
+                      <b>{isDone ? `Move ${order} finished` : 'Done when'}</b>
+                      <span>{m.gate}</span>
+                    </div>
+                  )}
+                  {/* One clear button; the rest are quiet, so there is no
+                      deciding which to press. "How to do it" is the paywall when
+                      payments go live (see PlaybookCta for the price). */}
+                  <div className="wayout__p2acts">
+                    {!past && onOpenPlaybook && (
+                      <button type="button" className="wayout__p2go" onClick={() => onOpenPlaybook(order)}>How to do it</button>
+                    )}
+                    {!past && (
+                      <button type="button" className="wayout__p2small" onClick={() => toggle(i)} aria-pressed={isDone}>
+                        {isDone ? 'Done ✓' : 'Mark done'}
                       </button>
+                    )}
+                    {!past && !theirs && openNote !== order && (
+                      <button type="button" className="wayout__p2small" onClick={() => { setDraft(''); setOpenNote(order) }}>Add a note</button>
                     )}
                   </div>
 
-                  {/* ⭐⭐ THEIR OWN WORDS, ON THIS MOVE. Two outcomes from one box:
-                      pin it on (the plan is unchanged, their note sits beside
-                      ours) or redo (it goes into the next generation). */}
+                  {/* ⭐⭐ THEIR OWN WORDS, ON THIS MOVE. Save it beside ours, or
+                      rewrite the move from it. */}
                   {theirs && openNote !== order && (
                     <div className="wayout__yours">
                       <b>Your note</b>
                       <p>{theirs}</p>
-                      <button type="button" onClick={() => { setDraft(theirs); setOpenNote(order) }}>Change it</button>
+                      {!past && <button type="button" onClick={() => { setDraft(theirs); setOpenNote(order) }}>Change it</button>}
                     </div>
                   )}
-                  {openNote === order ? (
+                  {openNote === order && (
                     <div className="wayout__addbox">
                       <textarea
                         value={draft}
@@ -1406,9 +1262,6 @@ export function Map({
                       />
                       <div className="wayout__addrow">
                         <button type="button" className="keep" onClick={() => saveNote(order, false)}>Save note</button>
-                        {/* ⚠️ A button that silently does nothing is worse than one that
-                            says why. When the rebuild is spent, the redo is not
-                            rendered at all — and the hint below says what it costs. */}
                         {!spent && (
                           <button type="button" className="redo" onClick={() => saveNote(order, true)}>
                             Rewrite this move using my note
@@ -1418,80 +1271,53 @@ export function Map({
                       </div>
                       <p className="wayout__addhint">
                         {spent ? (
-                          <>
-                            <b>Save note</b> keeps your note next to this move. You have used
-                            your one free rewrite. More rewrites come with the walkthrough.
-                          </>
+                          <><b>Save note</b> keeps your note next to this move. You have used your one free rewrite. More rewrites come with the walkthrough.</>
                         ) : (
-                          <>
-                            <b>Save note</b> keeps your note next to this move. <b>Rewrite</b> changes
-                            this move and the ones after it to fit your note. You get one rewrite,
-                            so save it for when something important changes.
-                          </>
+                          <><b>Save note</b> keeps your note next to this move. <b>Rewrite</b> changes this move and the ones after it to fit your note. You get one rewrite, so save it for when something important changes.</>
                         )}
                       </p>
                     </div>
-                  ) : !theirs && (
-                    <button
-                      type="button"
-                      className="wayout__addstrip"
-                      onClick={() => { setDraft(''); setOpenNote(order) }}
-                    >
-                      + Add a note to this move
-                    </button>
                   )}
+                </article>
+              )
+            })}
+          </div>
+        </>
+      )}
 
-                  {isDone && <span className="wayout__stamp">Done</span>}
-                </div>
-
-                {/* The gate gets its own grid column — see wayout.css. Not after
-                    the last move: there is nothing it unlocks. */}
-                {m.gate && i < map.moves.length - 1 && (
-                  <div className={`wayout__gatetag${isDone ? ' wayout__gatetag--passed' : ''}`}>
-                    <b>{isDone ? `\u2713 Move ${order} finished` : `Move ${order} is done when`}</b>
-                    <span>{m.gate}</span>
-                  </div>
-                )}
-              </Fragment>
-            )
-          })}
+      {/* ⭐⭐ WHERE THIS GOES, IN THEIR OWN WORDS. The reason to start is their
+          own picture of the end, verbatim from the year-from-now answer. */}
+      {String(answers?.tuesday ?? '').trim() && (
+        <div className="wayout__p2dest">
+          <b>Where this takes you, in your words</b>
+          <p>“{tidyQuote(String(answers.tuesday).trim())}”</p>
+          <small>The moves above are built to get you here.</small>
         </div>
-      </div>
+      )}
+      {(answers?.fiveYears?.trim() || answers?.tenYears?.trim()) && (
+        <section className="wayout__ladder" aria-label="Your way out">
+          <h3 className="wayout__label">Further out</h3>
+          <ol>
+            {[['In five years', answers.fiveYears], ['In ten years', answers.tenYears]]
+              .filter(([, v]) => String(v ?? '').trim())
+              .map(([when, v]) => <li key={when}><span>{when}</span><p>{tidyQuote(String(v).trim())}</p></li>)}
+          </ol>
+        </section>
+      )}
 
-      {/* 🔴🔴 THREE MOVES DONE AND THEN NOTHING HAPPENED. Daniel, at the end of
-          the whole product: "once done all three there is no next step or
-          anything we talked about yet — what are we doing here?"
+      {/* Evidence of what is done, never praise (no rings, streaks or badges). */}
+      {!past && Array.isArray(map.moves) && map.moves.length > 0 && (
+        <div className="wayout__p2progress">
+          <Progress moves={map.moves} ticked={ticked} doneAt={progress?.doneAt ?? {}} earlier={earlier} />
+          <p className="wayout__planactions">
+            <button type="button" className="wayout__again" onClick={() => remindMe(map.moves, ticked)}>Remind me in a week</button>
+            <button type="button" className="wayout__again" onClick={() => window.print()}>Print or save as PDF</button>
+          </p>
+        </div>
+      )}
 
-          He is right and it is the worst possible place to stop. `/done` has
-          existed since 26 Sep — it asks whether it actually landed and starts the
-          next plan from the answer, which is the entire reason a subscription to
-          a product that FINISHES makes any sense. **Not one page linked to it.**
-
-          ⚠️ It appears only when every move is ticked. Offering "how did it go"
-          beside an unfinished plan is asking somebody to grade work they are
-          still doing. */}
       {map.moves?.length > 0 && ticked.size >= map.moves.length && (
         <div className={`wayout__allthree${justFinished ? ' is-new' : ''}`} ref={finishRef}>
-          {/* 🔴🔴 THE MOMENT WAS ON THE WRONG PAGE. Daniel, ticking the third box:
-              "this is it? seems very uneventful, no congratulations, nothing —
-              it's an afterthought."
-
-              He is right and the diagnosis is precise: the completion beat I
-              built was on `/done`, one click away behind a button that reads
-              like admin. But **the moment of finishing is the third tick, and it
-              happens HERE** — on the board, with all three notes in front of
-              them. A celebration on the next screen is a celebration nobody
-              walks into.
-
-              ⭐⭐ So the beat moved to where the event is. Same mark, same
-              sentence, same rule as `/done`: it is about the WORK — three boxes
-              ticked, which most people who write a plan never do — and never
-              about the outcome, which nobody has been asked about yet.
-
-              ⚠️ `is-new` only when it happens in front of them. Somebody
-              returning to a finished plan gets the card without the fanfare —
-              animating an old fact every time the page loads is the thing that
-              makes fanfare meaningless. */}
           <span className="wayout__finishedmark" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 12.5l5 5L20 7" />
@@ -1499,263 +1325,136 @@ export function Map({
           </span>
           <p className="wayout__finishedkick">All three</p>
           <b>You finished the plan.</b>
-          <p>
-            Most people who write one never get to the end of it. You did the
-            whole order, in order, which is the hard part and the part nobody
-            sees.
-          </p>
-          {/* ⚠️ A Link, not navigate — this component is also rendered by
-              Preview.jsx to check the design, where there is no session to
-              navigate for. */}
+          <p>Most people who write one never get to the end of it. You did the whole order, in order, which is the hard part and the part nobody sees.</p>
           <Link className="wayout__btn" to={`${WAYOUT_BASE}/done`}>Tell us how it went</Link>
-          <span className="wayout__allthreefine">
-            Answer one question and we will build your next plan from it.
-          </span>
+          <span className="wayout__allthreefine">Answer one question and we will build your next plan from it.</span>
         </div>
       )}
 
-
-      {/* ⚠️ Two REAL columns. When the setup moved above the moves this left an
-          empty first column and a page-wide hole beside "Crossed off". What was
-          ruled out goes left; what happens next goes right. */}
-      {/* ⭐⭐ THE REST OF THE PAGE IS THE BOARD TOO.
-          🔴 Daniel: "still has half the old half the new". He was right, and a
-          full-page screenshot showed why: the pinned notes stopped dead and
-          everything under them was flat rows and plain boxes — two design
-          languages on one page.
-          🔴 WORSE, EVERYTHING FROM "Through the off-season" DOWN TO THE
-          DISCLAIMER WAS INSIDE COLUMN TWO, which is 5/12 of the width. That is
-          what left ~900px of empty page beside a short "Crossed off" list, and
-          why the one dark CTA — the thing being sold — was rendered in a narrow
-          strip. The sections are now equal cards that FILL, and everything that
-          is not a section runs full width below them. */}
-      <div className="wayout__board">
-      {/* ⭐⭐ THE RUNNING THREAD, ON THE BOARD WITH EVERYTHING ELSE. Not a widget
-          in a corner and not a separate page: the place you tell it something
-          changed has to be the place you are looking at the thing that changed.
-          ⚠️ Only with a real session behind it — Preview renders this same
-          component to check the design and has nothing to talk to. */}
-      {!past && onSay && (
-        <PlanThread
-          thread={thread}
-          onSay={onSay}
-          busy={asking}
-          rebuilding={rebuilding}
-          locked={locked}
-          pending={threadBuild}
-          error={threadErr}
-          liveMap={liveMap}
-          onRedo={onRedoFromThread ?? undefined}
-          onDropDraft={onDropDraft ?? undefined}
-          onBringBack={onBringBack ?? undefined}
-          onCorrect={onCorrect ?? undefined}
-          answers={answers}
-          onSwitch={onSwitchVersion ?? undefined}
-        />
-      )}
-      {Array.isArray(map.cut) && map.cut.length > 0 && (
-        <section className="wayout__card">
-          <h3 className="wayout__label wayout__r" style={at(3.4)}>Ideas we left out, and why</h3>
-          <div className="wayout__cut wayout__r" style={at(3.5)}>
-            {map.cut.map((c, i) => (
-              <button
-                type="button"
-                key={i}
-                className="wayout__cutrow"
-                onClick={() => setOpenCut(openCut === i ? null : i)}
-                aria-expanded={openCut === i}
-              >
-                <s>{c.label}</s>
-                <em>{openCut === i ? 'Hide' : 'Why'}</em>
-                {openCut === i && (
-                  <>
-                    <span className="wayout__cutwhy">{c.why}</span>
-                    {/* ⭐⭐ THE OPTION IS SELECTABLE, NOT JUST READABLE. Daniel
-                        wanted the person choosing rather than being instructed.
-                        A menu of three equal options would have been the pile
-                        of ideas this product exists to replace — so the plan
-                        still commits to an order, and the things it ruled out
-                        can be ruled back in by the only person entitled to. */}
-                    {onInsist && (
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        className="wayout__insist"
-                        onClick={e => { e.stopPropagation(); onInsist(c.label) }}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); onInsist(c.label) }
-                        }}
-                      >
-                        I want this one anyway. Put it in the plan
-                      </span>
-                    )}
-                  </>
-                )}
-              </button>
+      <div id="wayout-whole" />
+      {Array.isArray(map.stats) && map.stats.length > 0 && (
+        <section className="wayout__p2section">
+          <h2>Where you’re starting</h2>
+          {/* Credit before the hole, only when the shortfall came from their own figures. */}
+          {map.stats.some(x => x.tone === 'hard') && (
+            <p className="wayout__p2lead">
+              You put every number down{String(answers?.debt ?? '').trim() ? ', the debt included' : ''}. Most people never get that far, and it is why your plan can be this specific.
+            </p>
+          )}
+          <div className="wayout__p2stats">
+            {map.stats.slice(0, 2).map((st, i) => (
+              <div className={`wayout__p2stat${st.tone === 'hard' ? ' is-hard' : ''}`} key={i}>
+                <span>{st.label}</span>
+                <b>{st.tone === 'good'
+                  ? <CountUp value={Number(st.value) || 0} prefix={st.prefix} suffix={st.suffix} />
+                  : <StatNum value={Number(st.value) || 0} prefix={st.prefix} suffix={st.suffix} />}</b>
+                {st.caption && <em>{st.caption}</em>}
+              </div>
             ))}
           </div>
-        </section>
-      )}
-
-      {Array.isArray(map.seasonPlan) && map.seasonPlan.length > 0 && (
-        <section className="wayout__card">
-          <h3 className="wayout__label wayout__r" style={at(3.7)}>When work is slow</h3>
-          {map.seasonPlan.map((s, i) => (
-            <p className="wayout__hint wayout__r" key={i} style={at(3.75)}>
-              <b>{s.months}</b>: {s.work}
-            </p>
-          ))}
-        </section>
-      )}
-
-      {/* ⭐⭐ WHAT IT TOOK AS GIVEN, SAID OUT LOUD, IMMEDIATELY BEFORE THEY ACT.
-          Daniel read his own plan and said "there are so many assumptions here
-          not based off any numbers or data" — and none of them were figures.
-          They were smuggled in as adjectives: the rental was in "a year-round
-          demand market", it would be "under professional management". He never
-          said either.
-
-          A plan cannot always avoid assuming. It can always avoid PRETENDING.
-          Declared here, an assumption stops being a lie and becomes the most
-          useful thing on the page: the one question whose answer changes the
-          plan, asked of the only person who knows it. */}
-      {/* ⭐ One book, beside the plan rather than instead of it. It is the
-          door next to the door — for the part of this that is about how they
-          SEE the situation rather than what they do on Saturday. The contract
-          has already dropped it if it is not on our shelf. */}
-      {map.read?.title && (
-        <section className="wayout__card wayout__read wayout__r" style={at(3.8)}>
-          <h3 className="wayout__label">A book that could help</h3>
-          <p className="wayout__readtitle">
-            <b>{map.read.title}</b>{map.read.author ? `, by ${map.read.author}` : ''}
+          <p className="wayout__p2hope">
+            {map.stats.some(x => x.tone === 'good')
+              ? 'You already bring in more than you have to pay each month. Your plan is about what you do with the extra.'
+              : 'You are starting from here, not staying here. The moves above are built to change these numbers, one at a time.'}
           </p>
-          {map.read.why && <p className="wayout__hint">{map.read.why}</p>}
-          {/* ⭐⭐ THE CAVEAT IS OURS, RENDERED FROM OUR OWN FILE, ALWAYS. A
-              caveat the model composes is one that can be enthusiastic itself
-              — and these are books somebody may act on with money. Naming a
-              book without saying what to hold lightly is how a shelf becomes
-              an endorsement. */}
-          {bookOnShelf(map.read.title)?.hold && (
-            <p className="wayout__hold">{bookOnShelf(map.read.title).hold}</p>
-          )}
         </section>
       )}
 
-      {Array.isArray(map.assumptions) && map.assumptions.length > 0 && (
-        <section className="wayout__card wayout__given wayout__r" style={at(3.85)}>
-          <h3 className="wayout__label">What your plan assumes</h3>
-          <ul>
-            {map.assumptions.map((a, i) => <li key={i}>{a}</li>)}
-          </ul>
-          <p className="wayout__hint">
-            If any of these are wrong, tell us. Your plan will change to fit.
-          </p>
-          {/* ⭐ The sentence above is only true if something can act on it. */}
-          {/* 🔴 A REFUSAL THAT LOOKS LIKE A NO-OP IS A BROKEN BUTTON. The one
-              rebuild from the answers is spent, and until now that fact was
-              never said anywhere — the page simply redrew the same plan.
-              ⚠️ It names the route that is still open rather than only the one
-              that is closed: saying what changed is not rationed the way going
-              back through the questions is. */}
-          {refused && (
-            <p className="wayout__hint">
-              You have already used your one chance to answer all the questions again. If something has changed, tell us under “Something changed?” and we will rewrite your plan.
-            </p>
-          )}
-          {/* ⭐ ONE WAY TO SAY "THAT IS NOT TRUE". This used to send them back
-              through every question — rationed to one go, so once spent a wrong
-              assumption could not be fixed. Saying what is true under "Something
-              changed?" is never rationed and rebuilds around it. */}
-          {onSay && (
-            <button
-              type="button"
-              className="wayout__again"
-              onClick={() => {
-                const box = document.getElementById('wayout-thread')
-                box?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                box?.focus({ preventScroll: true })
-              }}
-            >
-              Is one of these wrong? Tell us what is true
-            </button>
-          )}
+      {!past && onSay && (
+        <section className="wayout__p2section">
+          <PlanThread
+            thread={thread}
+            onSay={onSay}
+            busy={asking}
+            rebuilding={rebuilding}
+            locked={locked}
+            pending={threadBuild}
+            error={threadErr}
+            liveMap={liveMap}
+            onRedo={onRedoFromThread ?? undefined}
+            onDropDraft={onDropDraft ?? undefined}
+            onBringBack={onBringBack ?? undefined}
+            onCorrect={onCorrect ?? undefined}
+            answers={answers}
+            onSwitch={onSwitchVersion ?? undefined}
+          />
         </section>
       )}
-      </div>
 
-      {/* ⭐⭐ THE OFFER, AFTER THEY ALREADY HAVE THE ANSWER. Nobody can fear an
-          ambush in a flow where the assessment is theirs before anything is
-          asked for, and the thing sold is the honest one: not what to do —
-          that is above, free — but how to actually do it.
+      <section className="wayout__p2section">
+        <h2>Before you start</h2>
+        <p className="wayout__p2lead">Open any of these. Nothing here is homework.</p>
 
-          🔴 IT WAS FLAT. Daniel: "i dont like this sell ... its flat needs to
-          be exciting." It was a grey card on a cream page with a generic
-          heading and a paragraph, sitting under the most specific thing this
-          product has ever written about him. The fix is not louder words — it
-          is being SPECIFIC: it names HIS move one, in his plan's own words, and
-          lists what is actually inside rather than describing it. And it is the
-          one dark block on the page, so it reads as a door rather than another
-          section. */}
-      {/* 🔴 IT SOLD THEM SOMETHING THEY ALREADY HAD. Daniel: "this is kind of
-          redundant once you have paid access." He is right — a dark
-          full-width card headed "The next part", pitching the walkthrough with
-          "Free while this is being built. Nothing to pay", to somebody who has
-          already opened one. A door you have already walked through is a wall.
-
-          ⭐⭐ IT BECOMES A ROUTE INSTEAD OF A PITCH. Once any move's walkthrough
-          has been opened, the same card drops the sell and simply carries them
-          back to where they were, because at that point the useful thing it can
-          do is navigation. The card is gone entirely once all three are done —
-          the end-of-plan handoff has that job.
-          ⚠️ `started` comes from progress, which is the database, so it survives
-          a reload. A pitch that reappears after every refresh is the version of
-          this that annoys people most. */}
-      <div className={`wayout__offer wayout__r${hasOpened ? ' wayout__offer--known' : ''}`} style={at(4.2)}>
-        <span className="wayout__offerkick">{hasOpened ? 'Keep going' : 'Next: how to do it'}</span>
-        <h3>{map.moves?.[0]?.title ?? 'Move one'}</h3>
-        <p className="wayout__offerlead">
-          {hasOpened
-            ? 'Where you left off: what to do first, the words to use, and what usually goes wrong.'
-            : Array.isArray(map.stuck) && map.stuck.length > 0
-              ? 'You know what the move is. These are the questions that turn up the moment you start it.'
-              : 'You know what move 1 is. This shows you how to do it, for your town, your hours and the people who have paid you before.'}
-        </p>
-        {/* ⭐⭐ THE QUESTIONS, NOT THE FEATURES. Daniel: "telling you what is
-            inside is weak, not a good sell." He is right, and the reason is
-            that a contents list describes a product to somebody who has not
-            got a problem yet. These are the snags that arrive within an hour
-            of starting HIS move one, in his own situation — the awkward
-            wording, the number nobody will volunteer, the bit where the first
-            person he asks says "it depends".
-
-            ⚠️ Questions only. The moment one carries its answer it stops being
-            a gap and becomes a sample, and the thing being sold is the answer.
-            The contract drops any line that is not a question. */}
-        {Array.isArray(map.stuck) && map.stuck.length > 0 ? (
-          <ul className="wayout__offerlist wayout__offerlist--q">
-            {map.stuck.map((q, i) => <li key={i}>{q}</li>)}
-          </ul>
-        ) : (
-          <ul className="wayout__offerlist">
-            <li>The first thing to do, and the day to do it</li>
-            <li>A message you can copy and send</li>
-            <li>What to charge, and where that number comes from</li>
-            <li>What you do <b>not</b> need to buy yet</li>
-            <li>What goes wrong the first time, and what to do about it</li>
-          </ul>
+        {/* ⭐⭐ WHAT IT TOOK AS GIVEN stays OPEN: it has to be said out loud
+            before they act (Daniel: "so many assumptions here"). */}
+        {Array.isArray(map.assumptions) && map.assumptions.length > 0 && (
+          <details className="wayout__p2fold" open>
+            <summary><span>What your plan assumes <small>{map.assumptions.length}</small></span><i aria-hidden="true">+</i></summary>
+            <div className="wayout__p2in">
+              {map.assumptions.map((a, i) => <p key={i} className="wayout__p2item">{a}</p>)}
+              <p className="wayout__hint">If any of these are wrong, tell us. Your plan will change to fit.</p>
+              {refused && (
+                <p className="wayout__hint">You have already used your one chance to answer all the questions again. If something has changed, tell us under “Something changed?” and we will rewrite your plan.</p>
+              )}
+              {onSay && (
+                <button type="button" className="wayout__p2small" onClick={() => {
+                  const box = document.getElementById('wayout-thread')
+                  box?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                  box?.focus({ preventScroll: true })
+                }}>That’s not right. Tell us what is true</button>
+              )}
+            </div>
+          </details>
         )}
-        {/* ⭐⭐ THE ONE LINE THAT STOPS THIS CARD BACKFIRING.
-            Three questions nobody can answer, straight after a plan that just
-            made somebody feel capable, can quietly undo it — they leave the
-            page feeling less ready than when they arrived. Naming the questions
-            as NORMAL turns the same list from a set of holes in them into a set
-            of things that have answers, which is also the truth. */}
+
         {Array.isArray(map.stuck) && map.stuck.length > 0 && (
-          <p className="wayout__offerfine wayout__offernote">
-            Most people get stuck on these. The walkthrough shows you how to handle each one.
-          </p>
+          <details className="wayout__p2fold">
+            <summary><span>Where most people get stuck <small>{map.stuck.length}</small></span><i aria-hidden="true">+</i></summary>
+            <div className="wayout__p2in">
+              {map.stuck.map((q, i) => <p key={i} className="wayout__p2item">{q}</p>)}
+              <p className="wayout__hint">Most people get stuck on these. The walkthrough shows you how to handle each one.</p>
+              {!past && onOpenPlaybook && <button type="button" className="wayout__p2small" onClick={() => onOpenPlaybook(1)}>Show me how</button>}
+            </div>
+          </details>
         )}
-        <PlaybookCta onOpen={onOpenPlaybook} onPath={onOpenPath} hasOpened={hasOpened} />
+
+        {Array.isArray(map.cut) && map.cut.length > 0 && (
+          <details className="wayout__p2fold">
+            <summary><span>Ideas we left out, and why <small>{map.cut.length}</small></span><i aria-hidden="true">+</i></summary>
+            <div className="wayout__p2in">
+              {map.cut.map((c, i) => (
+                <div key={i} className="wayout__p2item">
+                  <b>{c.label}</b>
+                  <span>{c.why}</span>
+                  {/* ⭐⭐ The option can be ruled back in by the only person entitled to. */}
+                  {onInsist && <button type="button" className="wayout__p2small" onClick={() => onInsist(c.label)}>I want this one anyway. Put it in the plan</button>}
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+
+        {Array.isArray(map.seasonPlan) && map.seasonPlan.length > 0 && (
+          <details className="wayout__p2fold">
+            <summary><span>When work is slow</span><i aria-hidden="true">+</i></summary>
+            <div className="wayout__p2in">
+              {map.seasonPlan.map((x, i) => <p key={i} className="wayout__p2item"><b>{x.months}</b>: {x.work}</p>)}
+            </div>
+          </details>
+        )}
+
+        {map.read?.title && (
+          <details className="wayout__p2fold">
+            <summary><span>A book that could help</span><i aria-hidden="true">+</i></summary>
+            <div className="wayout__p2in wayout__read">
+              <p className="wayout__readtitle"><b>{map.read.title}</b>{map.read.author ? `, by ${map.read.author}` : ''}</p>
+              {map.read.why && <p className="wayout__hint">{map.read.why}</p>}
+              {/* The caveat is ours, from our own file, always. */}
+              {bookOnShelf(map.read.title)?.hold && <p className="wayout__hold">{bookOnShelf(map.read.title).hold}</p>}
+            </div>
+          </details>
+        )}
+      </section>
       </div>
 
       {/* ⭐ After our own offer, never before it: an addition, not a switch. */}
@@ -1853,6 +1552,14 @@ export function Map({
  * paid half — whether people want the how badly enough to ask for it is the
  * entire commercial thesis, and this measures it for the price of one column.
  */
+/** The first `n` sentences of a paragraph (all of it if it is that short). */
+function leadSentences(text, n) {
+  const t = String(text ?? '').trim()
+  const parts = t.match(/[^.!?]+[.!?]+(\s|$)/g)
+  if (!parts || parts.length <= n) return t
+  return parts.slice(0, n).join('').trim()
+}
+
 function PlaybookCta({ onOpen, onPath = null, hasOpened = false }) {
   // ⭐⭐ IT EXISTS NOW, SO THE BUTTON DOES THE THING. This was a waiting list
   // for one day, which was the honest CTA while there was nothing behind it —

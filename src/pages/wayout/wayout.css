@@ -3854,3 +3854,94 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
 .wayout__q2move b { font-weight: 900; }
 .wayout__q2move span { color: var(--p-muted); font-weight: 600; font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .wayout__q2moment, .wayout__q2pill.is-bump b { animation: none; } }
+
+/* ── The plan as a reveal (2 Nov 2026) ──────────────────────────────────────
+   Daniel approved the mock-up ("look good yes"). Same bright tokens as the
+   questions and the path; each move keeps its path colour (amber, coral, sky). */
+.wayout__plan2 {
+  --p-green: #1DB45A; --p-green-d: #13893F; --p-green-soft: #DDF6E5; --p-amber: #FFB020; --p-amber-d: #D98500;
+  --p-coral: #FF6B4A; --p-coral-d: #D94A2C; --p-sky: #2E9BF0; --p-sky-d: #1C74BA; --p-line: #E8E0CC; --p-muted: #5E6A57;
+  max-width: 1040px; margin: 0 auto;
+}
+.wayout__p2hero { text-align: center; max-width: 800px; margin: 0 auto; padding-block: 18px 6px; }
+.wayout__p2ready { display: inline-flex; align-items: center; gap: 8px; background: var(--p-green-soft); color: var(--p-green-d); font-weight: 900;
+  border-radius: 999px; padding: 8px 16px; font-size: 15px; }
+.wayout__p2ready b { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--p-green); color: #fff; font-size: 13px; }
+.wayout__plan2 .wayout__p2title { margin: 18px 0 10px; font-size: clamp(30px, 5.2vw, 52px); line-height: 1.08; letter-spacing: -.025em; font-weight: 900; text-wrap: balance; }
+.wayout__p2seen { margin: 16px auto 0; max-width: 640px; }
+.wayout__p2seen q { display: block; font-family: Caveat, cursive; font-size: 26px; line-height: 1.15; margin-bottom: 6px; }
+.wayout__p2seen p { margin: 0; font-size: 18px; font-weight: 600; color: var(--p-muted); }
+.wayout__p2link { margin-left: 6px; border: 0; background: none; padding: 0; font: inherit; font-weight: 800; color: var(--p-sky-d); text-decoration: underline; cursor: pointer; }
+.wayout__p2cta { display: grid; gap: 8px; max-width: 440px; margin: 26px auto 0; }
+.wayout__p2cta .wayout__btn--sun { background: var(--p-green); color: #fff; border-radius: 18px; padding: 19px; font-size: 20px; font-weight: 900; box-shadow: 0 6px 0 var(--p-green-d); }
+.wayout__p2cta .wayout__btn--sun:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--p-green-d); }
+.wayout__p2cta .wayout__btn--quiet { border-radius: 16px; }
+.wayout__p2first { margin: 4px 0 0; font-weight: 700; font-size: 15px; }
+.wayout__p2first b { color: var(--p-amber-d); }
+.wayout__p2calm { margin: 0; font-size: 13px; font-weight: 700; color: var(--p-muted); }
+.wayout__p2more { justify-self: center; font-weight: 800; color: var(--p-muted); }
+
+.wayout__p2route { display: flex; align-items: center; max-width: 760px; margin: 42px auto 0; }
+.wayout__p2route span { flex: none; display: grid; place-items: center; min-width: 34px; height: 34px; padding: 0 10px; border-radius: 999px; font-weight: 900; font-size: 13px; color: #fff; }
+.wayout__p2route .is-now { background: var(--ink); }
+.wayout__p2route .is-m1 { background: var(--p-amber); } .wayout__p2route .is-m2 { background: var(--p-coral); } .wayout__p2route .is-m3 { background: var(--p-sky); }
+.wayout__p2route .is-done, .wayout__p2route .is-end { background: var(--p-green); }
+.wayout__p2route i { flex: 1; height: 5px; border-radius: 9px; background: repeating-linear-gradient(90deg, #E3D9C2 0 8px, transparent 8px 16px); }
+.wayout__p2route i.is-lit { background: var(--p-green); }
+
+.wayout__p2moves { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 20px; text-align: left; }
+.wayout__p2move { --c: var(--p-amber); --cd: #F3D9A6; position: relative; background: #fff; border-radius: 22px; padding: 22px 20px 18px;
+  border-top: 10px solid var(--c); box-shadow: 0 6px 0 var(--cd), 0 14px 30px rgba(60, 45, 10, .12); animation: wayout-p2rise .55s cubic-bezier(.2, .8, .2, 1) both; }
+.wayout__p2move.is-m2 { --c: var(--p-coral); --cd: #F6C6B8; animation-delay: .15s; }
+.wayout__p2move.is-m3 { --c: var(--p-sky); --cd: #BFDDF6; animation-delay: .3s; }
+.wayout__p2move.is-done { --c: var(--p-green); --cd: #BFE8CC; }
+@keyframes wayout-p2rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.wayout__p2num { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--c); color: #fff; font-weight: 900; font-size: 19px;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--c) 70%, #000); }
+.wayout__p2when { margin: 12px 0 0; font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--p-muted); }
+.wayout__p2move h3 { margin: 4px 0 8px; font-size: 20px; line-height: 1.22; font-weight: 900; letter-spacing: -.01em; }
+.wayout__p2detail { margin: 0; color: var(--p-muted); font-weight: 600; font-size: 15px; }
+.wayout__p2gate { margin-top: 14px; padding-top: 12px; border-top: 2px dashed #F1EBDD; font-size: 14px; font-weight: 700; }
+.wayout__p2gate b { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--p-green-d); margin-bottom: 2px; }
+.wayout__p2acts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 14px; }
+.wayout__p2go { border: 0; border-radius: 999px; padding: 10px 16px; font: inherit; font-weight: 900; font-size: 15px; color: #fff; background: var(--c);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--c) 70%, #000); cursor: pointer; }
+.wayout__p2go:active { transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--c) 70%, #000); }
+.wayout__p2small { border: 0; background: none; padding: 8px 6px; font: inherit; font-weight: 800; font-size: 14px; color: var(--p-muted); cursor: pointer; text-align: left; }
+.wayout__p2small:hover { color: var(--ink); }
+.wayout__p2move .wayout__yours, .wayout__p2move .wayout__addbox { margin-top: 12px; }
+
+.wayout__p2dest { margin-top: 22px; background: var(--p-green-soft); border-radius: 22px; padding: 24px; text-align: center; box-shadow: 0 6px 0 #BFE8CC; }
+.wayout__p2dest b { font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: var(--p-green-d); }
+.wayout__p2dest p { margin: 8px auto 4px; max-width: 680px; font-family: Caveat, cursive; font-size: 30px; line-height: 1.15; font-weight: 600; }
+.wayout__p2dest small { font-weight: 700; color: var(--p-muted); }
+.wayout__p2progress { margin-top: 22px; }
+
+.wayout__p2section { margin-top: 48px; }
+.wayout__p2section h2 { margin: 0 0 6px; font-size: 24px; font-weight: 900; letter-spacing: -.01em; }
+.wayout__p2lead { margin: 0 0 16px; color: var(--p-muted); font-weight: 600; }
+.wayout__p2stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.wayout__p2stat { background: #fff; border-radius: 18px; padding: 18px 20px; box-shadow: 0 4px 0 var(--p-line); }
+.wayout__p2stat span { font-size: 14px; font-weight: 800; color: var(--p-muted); }
+.wayout__p2stat b { display: block; margin: 4px 0 2px; font-size: 38px; font-weight: 900; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.wayout__p2stat.is-hard b { color: var(--p-coral); }
+.wayout__p2stat em { font-style: normal; font-size: 14px; color: var(--p-muted); font-weight: 600; }
+.wayout__p2hope { margin: 14px 0 0; font-weight: 800; color: var(--p-green-d); }
+
+.wayout__p2fold { margin-top: 12px; background: #fff; border-radius: 18px; box-shadow: 0 4px 0 var(--p-line); overflow: hidden; }
+.wayout__p2fold summary { list-style: none; cursor: pointer; padding: 18px 20px; font-weight: 900; font-size: 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.wayout__p2fold summary::-webkit-details-marker { display: none; }
+.wayout__p2fold summary small { margin-left: 6px; font-weight: 800; font-size: 13px; color: #fff; background: var(--p-muted); border-radius: 999px; padding: 1px 8px; }
+.wayout__p2fold summary i { flex: none; width: 30px; height: 30px; border-radius: 50%; background: #F3EEE2; display: grid; place-items: center; font-style: normal; transition: transform .2s; }
+.wayout__p2fold[open] summary i { transform: rotate(45deg); }
+.wayout__p2in { padding: 0 20px 18px; }
+.wayout__p2item { margin: 0; padding: 12px 0; border-top: 2px solid #F6F1E6; }
+.wayout__p2item b { display: block; margin-bottom: 4px; }
+.wayout__p2item span { display: block; color: var(--p-muted); font-weight: 600; }
+
+@media (max-width: 860px) {
+  .wayout__p2moves, .wayout__p2stats { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .wayout__p2move { animation: none; } .wayout__p2fold summary i { transition: none; } }
+@media print { .wayout__p2cta, .wayout__p2acts, .wayout__p2route { display: none !important; } .wayout__p2fold { box-shadow: none; } }
+.wayout__p2cta .wayout__offerfine { color: var(--p-muted); margin: 0; font-size: 13px; font-weight: 700; }
