@@ -36,7 +36,10 @@ import { buildPageMeta, SITE_NAME } from '../../lib/seo'
 const DEMO_META = buildPageMeta({
   title:       `See it work — ${SITE_NAME}`,
   description: 'A worked example: what Solomon says when a growing owner asks whether to expand, using a fictional company’s real-shaped numbers.',
-  path:        '/demo',
+  // ⚠️ /tour, not /demo. /demo is the live demo's door (DemoEntry.jsx): it
+  // signs a visitor into the sample company and its HTML points at the home
+  // page, so this page saying it was /demo meant Google indexed neither (2 Nov).
+  path:        '/tour',
 })
 
 // ── The example company ───────────────────────────────────────────────────────

@@ -39,7 +39,7 @@ const ANSWER_UPDATED = Object.fromEntries(ANSWERS.map(a => [a.slug, a.updated]))
 const ELIV8_FILES = {
   '/':               ['src/pages/Landing.jsx'],
   '/pricing':        ['src/pages/Pricing.jsx', 'src/lib/pricing.js'],
-  '/demo':           ['src/pages/marketing/Demo.jsx', 'src/pages/DemoEntry.jsx'],
+  '/tour':           ['src/pages/marketing/Demo.jsx'],
   '/about':          ['src/pages/marketing/About.jsx'],
   '/security':       ['src/pages/marketing/Security.jsx'],
   '/privacy':        ['src/pages/marketing/Privacy.jsx'],
