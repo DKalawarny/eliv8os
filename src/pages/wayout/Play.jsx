@@ -12,6 +12,7 @@ import {
 import { humanError } from '../../lib/wayout/humanError'
 import CrisisHelp from './CrisisHelp'
 import { soundsLikeCrisis } from '../../lib/wayout/replyJson'
+import { pathIsStale, stepStatus } from '../../lib/wayout/path'
 
 /**
  * The way out — the play-by-play for one move.
@@ -256,6 +257,19 @@ function AskBox({ thread, onAsk, onPin, pinned, seed, region = null }) {
       )}
     </div>
   )
+}
+
+/**
+ * The path's steps for one move, with where each one stands, for the overview.
+ * Nothing when there is no path yet or it was drawn from an older plan.
+ */
+function pathStepsFor(session, order) {
+  const path = session?.path
+  if (!path?.parts || !session?.map || pathIsStale(path, session.map)) return null
+  const part = path.parts.find(p => p.move === order)
+  if (!part) return null
+  const state = session.path_state ?? {}
+  return part.steps.map(s => ({ id: s.id, title: s.title, status: stepStatus(path, state, s) }))
 }
 
 export default function Play() {
@@ -532,12 +546,12 @@ function PlayMove({ order }) {
           auto update?" Auto-regenerating would spend a generation every time
           the page is opened and rewrite instructions somebody may be halfway
           through following. Making the state visible costs neither. */}
-      <Playbook play={play} index={order} superseded={stale} notice={stale ? (
-        <div className="wayout__stale">
+      <Playbook play={play} index={order} superseded={stale} steps={pathStepsFor(session, order)} notice={stale ? (
+        <div className="wayout__stale wayout__ovstale">
+          <p className="wayout__oveyebrow">Move {order}</p>
           <p>
-            Your plan has changed since this walkthrough was written, so these are
-            the steps for your old move {order}.
-            {moveNow ? <> Your move {order} is now <b>{moveNow}</b>.</> : null}
+            <b>Your plan changed.</b>{' '}
+            {moveNow ? <>Your move {order} is now <b>{moveNow}</b>.</> : <>This move is different now.</>}
           </p>
           <p>
             <button
@@ -553,7 +567,7 @@ function PlayMove({ order }) {
                 } catch (err) { setError(err.message) }
               }}
             >
-              Write the walkthrough for this move
+              Write the steps for this move
             </button>
           </p>
         </div>

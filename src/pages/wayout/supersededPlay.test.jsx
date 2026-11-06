@@ -5,11 +5,11 @@ import { HelmetProvider } from 'react-helmet-async'
 import Playbook from './Playbook'
 
 // 9 Oct, Daniel: "whys it like this when click back through walk through with
-// the lines". The fade wrapped the whole page, so the button that fixes it
-// looked switched off. Only the old instructions may fade.
+// the lines". 6 Nov: "messy and confusing". A walkthrough for a move the plan
+// no longer has leads with the way forward; the old steps fold away.
 const render = props => renderToStaticMarkup(
   <HelmetProvider><MemoryRouter>
-    <Playbook play={{ title: 'The old move', first: 'Do the old thing' }} index={1} {...props}>
+    <Playbook play={{ title: 'The old move', thisWeek: { action: 'Do the old thing' } }} index={1} {...props}>
       <p id="child">ask box</p>
     </Playbook>
   </MemoryRouter></HelmetProvider>,
@@ -18,21 +18,35 @@ const render = props => renderToStaticMarkup(
 describe('a superseded walkthrough', () => {
   const html = render({
     superseded: true,
-    notice: <div className="wayout__stale"><button className="wayout__btn">Write the walkthrough for this move</button></div>,
+    notice: <div className="wayout__stale"><button className="wayout__btn">Write the steps for this move</button></div>,
   })
-  const fadeAt = html.indexOf('wayout__superseded')
+  const foldAt = html.indexOf('wayout__ovold')
 
-  it('fades the old instructions', () => {
-    expect(fadeAt).toBeGreaterThan(-1)
-    expect(html.indexOf('id="child"')).toBeGreaterThan(fadeAt)
-  })
-
-  it('keeps the way back, the notice and its button outside the fade', () => {
-    expect(html.indexOf('The whole plan')).toBeLessThan(fadeAt)
-    expect(html.indexOf('Write the walkthrough for this move')).toBeLessThan(fadeAt)
+  it('puts the way back and the button first, the old steps folded after', () => {
+    expect(foldAt).toBeGreaterThan(-1)
+    expect(html.indexOf('Back to your plan')).toBeLessThan(foldAt)
+    expect(html.indexOf('Write the steps for this move')).toBeLessThan(foldAt)
+    expect(html.indexOf('Do the old thing')).toBeGreaterThan(foldAt)
+    expect(html).not.toMatch(/<details[^>]*wayout__ovold[^>]*open/)
   })
 
-  it('does not fade a current walkthrough', () => {
-    expect(render({}).includes('wayout__superseded')).toBe(false)
+  it('offers no ask box or done button for steps the plan no longer has', () => {
+    expect(html.includes('id="child"')).toBe(false)
+  })
+
+  it('shows a current walkthrough in full', () => {
+    const now = render({})
+    expect(now.includes('wayout__ovold')).toBe(false)
+    expect(now.includes('id="child"')).toBe(true)
+  })
+
+  it('takes the dashes out of stored text', () => {
+    const out = renderToStaticMarkup(
+      <HelmetProvider><MemoryRouter>
+        <Playbook play={{ title: 'Move', words: { script: 'Hey — I am selling the house' } }} index={1} />
+      </MemoryRouter></HelmetProvider>,
+    )
+    expect(out).toContain('Hey. I am selling the house')
+    expect(out).not.toContain('—')
   })
 })

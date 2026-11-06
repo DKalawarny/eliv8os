@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import WayoutShell from './WayoutShell'
 import Working from './Working'
 import CrisisHelp from './CrisisHelp'
@@ -15,6 +15,7 @@ import {
 } from '../../lib/wayout/path'
 import { tick, buzz } from '../../lib/wayout/feedback'
 import { humanError } from '../../lib/wayout/humanError'
+import { readableDeep } from '../../lib/wayout/mapContract'
 
 /**
  * ⭐⭐ THE PATH (Daniel, 31 Oct 2026). The plan's three moves as small steps,
@@ -32,6 +33,7 @@ import { humanError } from '../../lib/wayout/humanError'
  */
 export default function Path() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
   const [session, setSession] = useState(null)
   const [path, setPath] = useState(null)
   const [state, setState] = useState({})
@@ -129,6 +131,7 @@ export default function Path() {
         gap={monthlyGap(session?.map)}
         onState={onState}
         onHowTo={move => setHowTo(move)}
+        openStep={params.get('step')}
         doneLink={`${WAYOUT_BASE}/done`}
       />
       {howTo && <HowToSheet session={session} order={howTo} onClose={() => setHowTo(null)} />}
@@ -173,8 +176,16 @@ const Badge = ({ kind }) => (kind === 'star' ? <Star /> : kind === 'coin' ? <Coi
  * `onState(nextState, finishedMove)`; owns nothing that has to persist, so the
  * dev preview can drive it with sample data and no database.
  */
-export function PathView({ path, state, headline = '', gap = null, onState, moveLink = null, onHowTo = null, doneLink = null, now: nowProp = null }) {
-  const [sheet, setSheet] = useState(null)        // { step, view, ... }
+export function PathView({ path, state, headline = '', gap = null, onState, moveLink = null, onHowTo = null, doneLink = null, now: nowProp = null, openStep = null }) {
+  // ⭐ `openStep`: a step tapped on a move's overview page (/path?step=2.3)
+  // opens straight onto that step, the same as tapping it here.
+  const [sheet, setSheet] = useState(() => {
+    const step = openStep ? allSteps(path).find(s => s.id === openStep) : null
+    if (!step) return null
+    const status = stepStatus(path, state, step, nowProp ?? new Date())
+    return { step, view: status === 'blocked' ? 'blocked' : status === 'parked' ? 'parked'
+      : ['done', 'tried'].includes(status) ? 'past' : step.wait && !state[step.id]?.s ? 'wait' : 'do' }
+  })        // { step, view, ... }
   const [lastUsed, setLastUsed] = useState({})
   const trail = useRef(null)
   const [segs, setSegs] = useState([])
@@ -732,7 +743,8 @@ export function HowToSheet({ session, order, onClose, sample = null }) {
   return <Sheet onClose={onClose}>{body}</Sheet>
 }
 
-function PlayView({ play, order, stale, onClose }) {
+function PlayView({ play: raw, order, stale, onClose }) {
+  const play = readableDeep(raw)
   const [copied, setCopied] = useState(false)
   const copy = async () => {
     try { await navigator.clipboard.writeText(play.words.script); setCopied(true) } catch { /* select it by hand */ }
@@ -741,7 +753,7 @@ function PlayView({ play, order, stale, onClose }) {
     <div className="wayout__pplay">
       <p className="wayout__peyebrow">Part {order} · how to do it</p>
       <h3>{play.title}</h3>
-      {stale && <div className="wayout__pnote"><b>Your plan changed</b>This was written before your last change. The full walkthrough page can write it again.</div>}
+      {stale && <div className="wayout__pnote"><b>Your plan changed</b>This was written before your last change. This part’s overview can write it again.</div>}
 
       {play.thisWeek?.action && (
         <div className="wayout__pfirst">
@@ -796,7 +808,7 @@ function PlayView({ play, order, stale, onClose }) {
 
       <div className="wayout__pacts">
         <button type="button" className="wayout__pbtn is-go" onClick={onClose}>Back to the path</button>
-        <Link className="wayout__pbtn is-soft" to={`${WAYOUT_BASE}/play/${order}`}>Ask a question about this part</Link>
+        <Link className="wayout__pbtn is-soft" to={`${WAYOUT_BASE}/play/${order}`}>Overview and questions</Link>
       </div>
     </div>
   )

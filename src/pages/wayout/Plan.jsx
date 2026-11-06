@@ -854,6 +854,7 @@ export default function Plan() {
       refused={refused}
       onOpenPlaybook={past ? null : openPlaybook}
       onOpenPath={past ? null : () => navigate(`${WAYOUT_BASE}/path`)}
+      pathState={session?.path_state ?? null}
       onRegenerate={!past && import.meta.env.DEV ? regenerateNow : null}
       onMove={past ? null : setMoveDone}
       onInsist={past ? null : insist}
@@ -958,7 +959,7 @@ function WorthAsk({ onSave }) {
 export function Map({
   map, onRebuild, onRedoFromThread, onDropDraft, onRemoveVersion, onChoose, onGoWith, onBringBack, onCorrect, answers = {}, choosing = false, chooseErr = '', onRestore, onSwitchVersion, liveMap = null, threadBuild = null, threadErr = '', refused = false, onOpenPlaybook, onOpenPath = null, onRegenerate, onMove, onInsist, onNote,
   moveNotes = {}, progress, rebuilding = false, locked = false, error = '', onDismissError = null, spent = false, chapter = 1,
-  thread = [], onSay = null, asking = false, past = false, earlier = [],
+  thread = [], onSay = null, asking = false, past = false, earlier = [], pathState = null,
 }) {
   // 🔴 THIS USED TO BE LOCAL STATE AND IT WAS A LIE. A tick vanished on reload,
   // nothing read it, and the gate under every move — "move 2 starts when…" —
@@ -970,6 +971,7 @@ export function Map({
   // ⭐ Has any walkthrough actually been opened? That is the line between
   // somebody being sold the paid half and somebody already inside it.
   const hasOpened = (progress?.started?.size ?? 0) > 0
+  const pathStarted = Object.keys(pathState ?? {}).length > 0
 
   // ⭐⭐ Their own words on one move. `openNote` is which box is open, `draft` is
   // what is in it. One draft, not one per move — only one box is ever open, and
@@ -1175,7 +1177,7 @@ export function Map({
         )}
         {!past && (
           <div className="wayout__p2cta">
-            <PlaybookCta onOpen={onOpenPlaybook} onPath={onOpenPath} hasOpened={hasOpened} />
+            <PlaybookCta onOpen={onOpenPlaybook} onPath={onOpenPath} hasOpened={hasOpened} pathStarted={pathStarted} />
             {/* One concrete first thing; a start you can picture is a start you make. */}
             {nextMove && <p className="wayout__p2first">{ticked.size ? 'Next' : 'First up'}: <b>{nextMove.title}</b></p>}
             {/* The honest line, beside the button (Daniel: "a suggested plan, up
@@ -1341,16 +1343,24 @@ export function Map({
               You put every number down{String(answers?.debt ?? '').trim() ? ', the debt included' : ''}. Most people never get that far, and it is why your plan can be this specific.
             </p>
           )}
+          {/* ⭐ ONE CARD, NOT TWO (Daniel, 6 Nov: "should these be combined").
+              Two cards said the same $2,500 twice: once as a number, once in
+              the other card's caption. The two figures sit side by side in one
+              card with one line under them, the caption that does the sum. */}
           <div className="wayout__p2stats">
-            {map.stats.slice(0, 2).map((st, i) => (
-              <div className={`wayout__p2stat${st.tone === 'hard' ? ' is-hard' : ''}`} key={i}>
-                <span>{st.label}</span>
-                <b>{st.tone === 'good'
-                  ? <CountUp value={Number(st.value) || 0} prefix={st.prefix} suffix={st.suffix} />
-                  : <StatNum value={Number(st.value) || 0} prefix={st.prefix} suffix={st.suffix} />}</b>
-                {st.caption && <em>{st.caption}</em>}
+            <div className="wayout__p2stat">
+              <div className="wayout__p2figs">
+                {map.stats.slice(0, 2).map((st, i) => (
+                  <div className={st.tone === 'hard' ? 'is-hard' : undefined} key={i}>
+                    <span>{st.label}</span>
+                    <b>{st.tone === 'good'
+                      ? <CountUp value={Number(st.value) || 0} prefix={st.prefix} suffix={st.suffix} />
+                      : <StatNum value={Number(st.value) || 0} prefix={st.prefix} suffix={st.suffix} />}</b>
+                  </div>
+                ))}
               </div>
-            ))}
+              {statLine(map.stats.slice(0, 2)) && <em>{statLine(map.stats.slice(0, 2))}</em>}
+            </div>
           </div>
           <p className="wayout__p2hope">
             {map.stats.some(x => x.tone === 'good')
@@ -1560,7 +1570,7 @@ function leadSentences(text, n) {
   return parts.slice(0, n).join('').trim()
 }
 
-function PlaybookCta({ onOpen, onPath = null, hasOpened = false }) {
+function PlaybookCta({ onOpen, onPath = null, hasOpened = false, pathStarted = false }) {
   // ⭐⭐ IT EXISTS NOW, SO THE BUTTON DOES THE THING. This was a waiting list
   // for one day, which was the honest CTA while there was nothing behind it —
   // an empty shelf reads worse than no shelf. There is something behind it.
@@ -1581,21 +1591,25 @@ function PlaybookCta({ onOpen, onPath = null, hasOpened = false }) {
       {/* ⭐ The path (31 Oct 2026): the three moves as small steps to tap
           through. It leads, because it is where somebody starts DOING; the full
           walkthrough of each move is one tap away from every part of it. */}
-      {onPath && (
+      {/* ⭐ ONE BUTTON (Daniel, 6 Nov: "messy and confusing"). "Start your
+          path" and "Back to the walkthrough" sat at the same size, two doors to
+          the same moves. The path is the way in; each move's overview opens
+          from its own card below ("How to do it") and from inside the path. */}
+      {onPath ? (
         <button className="wayout__btn wayout__btn--sun" onClick={() => onPath()}>
-          {WAYOUT_PAYMENTS_LIVE ? `Start your path, ${WAYOUT_PRICE_FULL}` : 'Start your path, step by step'}
+          {WAYOUT_PAYMENTS_LIVE && !pathStarted ? `Start your path, ${WAYOUT_PRICE_FULL}`
+            : pathStarted ? 'Keep going on your path' : 'Start your path, step by step'}
+        </button>
+      ) : (
+        <button className="wayout__btn wayout__btn--sun" onClick={() => onOpen()}>
+          {hasOpened ? 'Back to the walkthrough'
+            : WAYOUT_PAYMENTS_LIVE ? `Show me how, ${WAYOUT_PRICE_FULL}` : 'Show me how'}
         </button>
       )}
-      <button className={onPath ? 'wayout__btn wayout__btn--quiet' : 'wayout__btn wayout__btn--sun'} onClick={() => onOpen()}>
-        {hasOpened
-          ? 'Back to the walkthrough'
-          : onPath ? 'Read the full walkthrough'
-          : WAYOUT_PAYMENTS_LIVE ? `Show me how, ${WAYOUT_PRICE_FULL}` : 'Show me how'}
-      </button>
       {/* ⚠️ THE PRICE LINE IS AN ANSWER TO "what will this cost me", and once
           somebody is already inside, nobody is asking. Repeating "nothing to
           pay" to an existing user is the product reassuring itself. */}
-      {!hasOpened && (
+      {!hasOpened && !pathStarted && (
         <p className="wayout__offerfine">
           {WAYOUT_PAYMENTS_LIVE ? guaranteeLine() : 'Free for now. Nothing to pay.'}
         </p>
@@ -1780,6 +1794,13 @@ function CrisisNote({ message, region = null, onBack = null }) {
  * should not have to watch it arrive.
  */
 /** The same figure as CountUp, standing still. */
+/** The one line under the money card: the caption that shows the sum (it has
+ *  figures in it), else the first caption there is. */
+function statLine(stats) {
+  const caps = stats.map(s => String(s?.caption ?? '').trim()).filter(Boolean)
+  return caps.find(c => /\d/.test(c)) ?? caps[0] ?? ''
+}
+
 function StatNum({ value, prefix = '', suffix = '' }) {
   return <span className="wayout__statnum">{prefix}{value.toLocaleString()}{suffix && <small>{suffix}</small>}</span>
 }

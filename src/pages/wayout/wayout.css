@@ -3858,7 +3858,7 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
 /* ── The plan as a reveal (2 Nov 2026) ──────────────────────────────────────
    Daniel approved the mock-up ("look good yes"). Same bright tokens as the
    questions and the path; each move keeps its path colour (amber, coral, sky). */
-.wayout__plan2 {
+.wayout__plan2, .wayout__ov {
   --p-green: #1DB45A; --p-green-d: #13893F; --p-green-soft: #DDF6E5; --p-amber: #FFB020; --p-amber-d: #D98500;
   --p-coral: #FF6B4A; --p-coral-d: #D94A2C; --p-sky: #2E9BF0; --p-sky-d: #1C74BA; --p-line: #E8E0CC; --p-muted: #5E6A57;
   max-width: 1040px; margin: 0 auto;
@@ -3920,12 +3920,14 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
 .wayout__p2section { margin-top: 48px; }
 .wayout__p2section h2 { margin: 0 0 6px; font-size: 24px; font-weight: 900; letter-spacing: -.01em; }
 .wayout__p2lead { margin: 0 0 16px; color: var(--p-muted); font-weight: 600; }
-.wayout__p2stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.wayout__p2stat { background: #fff; border-radius: 18px; padding: 18px 20px; box-shadow: 0 4px 0 var(--p-line); }
-.wayout__p2stat span { font-size: 14px; font-weight: 800; color: var(--p-muted); }
-.wayout__p2stat b { display: block; margin: 4px 0 2px; font-size: 38px; font-weight: 900; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.wayout__p2stat.is-hard b { color: var(--p-coral); }
-.wayout__p2stat em { font-style: normal; font-size: 14px; color: var(--p-muted); font-weight: 600; }
+.wayout__p2stats { display: block; }
+.wayout__p2stat { background: #fff; border-radius: 18px; padding: 20px 22px; box-shadow: 0 4px 0 var(--p-line); }
+.wayout__p2figs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+/* ⚠️ `> span`: the number inside <b> is a span too, and the bare rule shrank it to 14px. */
+.wayout__p2figs > div > span { display: block; font-size: 14px; font-weight: 800; color: var(--p-muted); }
+.wayout__p2figs b { display: block; margin: 4px 0 0; font-size: 38px; font-weight: 900; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.wayout__p2figs .is-hard b { color: var(--p-coral); }
+.wayout__p2stat em { display: block; margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--p-line); font-style: normal; font-size: 15px; color: var(--p-muted); font-weight: 700; }
 .wayout__p2hope { margin: 14px 0 0; font-weight: 800; color: var(--p-green-d); }
 
 .wayout__p2fold { margin-top: 12px; background: #fff; border-radius: 18px; box-shadow: 0 4px 0 var(--p-line); overflow: hidden; }
@@ -3940,8 +3942,56 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
 .wayout__p2item span { display: block; color: var(--p-muted); font-weight: 600; }
 
 @media (max-width: 860px) {
-  .wayout__p2moves, .wayout__p2stats { grid-template-columns: 1fr; }
+  .wayout__p2moves { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { .wayout__p2move { animation: none; } .wayout__p2fold summary i { transition: none; } }
 @media print { .wayout__p2cta, .wayout__p2acts, .wayout__p2route { display: none !important; } .wayout__p2fold { box-shadow: none; } }
 .wayout__p2cta .wayout__offerfine { color: var(--p-muted); margin: 0; font-size: 13px; font-weight: 700; }
+
+/* ⭐⭐ THE MOVE OVERVIEW (Playbook.jsx, 6 Nov 2026: "I like the idea of an
+   overview but it's messy and confusing"). Same bright tokens as the path and
+   the plan; the yellow title stroke and the warm first-thing card stay. */
+.wayout__ov { max-width: 760px; }
+.wayout__oveyebrow { margin: 6px 0 0; font-size: 13px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--p-amber-d); }
+.wayout__ovtitle { margin: 6px 0 18px; font-size: clamp(28px, 4.6vw, 44px); line-height: 1.1; letter-spacing: -.02em; font-weight: 900; text-wrap: balance; }
+.wayout__ovfirst { background: #FFF1D6; border-radius: 18px; padding: 18px 20px; box-shadow: 0 4px 0 #F3D9A6; }
+.wayout__ovfirst b { display: block; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--p-amber-d); margin-bottom: 8px; }
+.wayout__ovfirst p { margin: 0; font-size: 19px; font-weight: 800; line-height: 1.4; }
+.wayout__ovfirst span { display: block; margin-top: 10px; color: var(--p-muted); font-weight: 600; line-height: 1.5; }
+.wayout__ovsteps { margin-top: 26px; }
+.wayout__ovsteps h3, .wayout__ovfolds h4 { margin: 0 0 10px; font-size: 12px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--p-sky-d); }
+.wayout__ovsteps ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.wayout__ovsteps a { display: flex; align-items: center; gap: 12px; background: #fff; border: 2px solid var(--p-line); border-radius: 14px; padding: 12px 14px;
+  color: var(--ink); text-decoration: none; font-weight: 700; box-shadow: 0 3px 0 var(--p-line); }
+.wayout__ovsteps a:hover { border-color: var(--p-sky); }
+.wayout__ovsteps i { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--p-line);
+  font-style: normal; font-weight: 900; font-size: 14px; color: #fff; }
+.wayout__ovsteps span { flex: 1; min-width: 0; }
+.wayout__ovsteps em { flex: none; font-style: normal; font-size: 13px; font-weight: 800; color: var(--p-muted); }
+.wayout__ovsteps .is-done i, .wayout__ovsteps .is-tried i { background: var(--p-green); border-color: var(--p-green); }
+.wayout__ovsteps .is-done span, .wayout__ovsteps .is-tried span { color: var(--p-muted); }
+.wayout__ovsteps .is-now a { border-color: var(--p-green); box-shadow: 0 3px 0 var(--p-green); }
+.wayout__ovsteps .is-now i { border-color: var(--p-green); }
+.wayout__ovsteps .is-now em { color: var(--p-green-d); }
+.wayout__ovfolds { margin-top: 26px; display: grid; gap: 10px; }
+.wayout__ovfold { background: #fff; border-radius: 16px; box-shadow: 0 4px 0 var(--p-line); border: 2px solid var(--p-line); overflow: hidden; }
+.wayout__ovfold summary { list-style: none; cursor: pointer; padding: 16px 18px; font-weight: 900; font-size: 17px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.wayout__ovfold summary::-webkit-details-marker { display: none; }
+.wayout__ovfold summary small { margin-left: 8px; font-weight: 800; font-size: 13px; color: #fff; background: var(--p-muted); border-radius: 999px; padding: 1px 8px; vertical-align: 2px; }
+.wayout__ovfold summary i { font-style: normal; font-size: 22px; line-height: 1; color: var(--p-sky-d); transition: transform .2s; }
+.wayout__ovfold[open] summary i { transform: rotate(45deg); }
+.wayout__ovbody { padding: 0 18px 16px; }
+.wayout__ovbody h4 { margin-top: 16px !important; }
+.wayout__ovctx { margin: 0 0 10px; color: var(--p-muted); font-weight: 600; }
+.wayout__ovask { margin-top: 12px; border: 0; background: #E3F1FD; color: var(--p-sky-d); font: inherit; font-weight: 800; font-size: 14px;
+  border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.wayout__ovnext { margin-top: 18px; background: var(--p-green-soft); border-radius: 16px; padding: 14px 18px; }
+.wayout__ovnext b { display: block; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--p-green-d); margin-bottom: 4px; }
+.wayout__ovnext p { margin: 0; font-weight: 600; line-height: 1.5; }
+.wayout__ovstale { margin: 10px 0 18px; }
+.wayout__ovstale p:not(.wayout__oveyebrow) { font-size: 19px; line-height: 1.45; }
+.wayout__ovold { margin-top: 8px; }
+.wayout__ovold > summary { cursor: pointer; font-weight: 800; color: var(--p-muted); text-decoration: underline; padding: 8px 0; }
+.wayout__ovold[open] > summary { margin-bottom: 12px; }
+@media (prefers-reduced-motion: reduce) { .wayout__ovfold summary i { transition: none; } }
+@media print { .wayout__ovfold > .wayout__ovbody { display: block; } .wayout__ovask { display: none; } }

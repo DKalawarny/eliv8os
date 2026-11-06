@@ -1306,6 +1306,18 @@ export function forReaders(text) {
   return plainDashes(noTuesday(text))
 }
 
+/**
+ * A walkthrough with forReaders run over every string in it, at render time.
+ * 🔴 6 Nov: the contract above only ever ran at generation and never ran this,
+ * so stored walkthroughs showed "Hey — I'm selling…" to the person reading.
+ */
+export function readableDeep(value) {
+  if (typeof value === 'string') return forReaders(value)
+  if (Array.isArray(value)) return value.map(readableDeep)
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, readableDeep(v)]))
+  return value
+}
+
 function deJargon(value) {
   if (typeof value === 'string') {
     value = forReaders(value)
