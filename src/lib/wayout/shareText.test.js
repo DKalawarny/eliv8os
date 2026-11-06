@@ -20,7 +20,7 @@ describe('a shared plan carries no money figures', () => {
       { title: 'Point every car detail at the card.', detail: '$14,000 at 22 percent' },
       { title: 'Ask for the raise that ends the second job — soon' },
     ] }
-    const text = shareDraft(map)
+    const text = shareDraft(map, SHARE_URL, { withMoves: true })
     expect(text).not.toMatch(/\$/)
     expect(text).not.toMatch(/14,000|300|22 percent|—/)
     expect(text).toContain('2. Point every car detail at the card\n')
@@ -29,7 +29,15 @@ describe('a shared plan carries no money figures', () => {
   })
 
   it('never includes the headline or a detail, only titles', () => {
-    const text = shareDraft({ headline: 'Leave before the custody hearing', moves: [{ title: 'x', detail: 'secret detail' }] })
+    const text = shareDraft({ headline: 'Leave before the custody hearing', moves: [{ title: 'x', detail: 'secret detail' }] }, SHARE_URL, { withMoves: true })
     expect(text).not.toMatch(/custody|secret/)
+  })
+
+  it('leaves their moves out unless they add them', () => {
+    const map = { moves: [{ title: 'Get the Merida land question answered' }] }
+    const text = shareDraft(map)
+    expect(text).not.toMatch(/Merida|three moves/)
+    expect(text).toContain(SHARE_URL)
+    expect(text).not.toMatch(/—/)
   })
 })

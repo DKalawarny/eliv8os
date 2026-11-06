@@ -1,4 +1,4 @@
-import { WAYOUT_NAME, WAYOUT_SITE_URL } from './brand'
+import { WAYOUT_NAME, WAYOUT_SITE_URL, WAYOUT_TOTAL_TIME } from './brand'
 import { forReaders } from './mapContract'
 
 /**
@@ -27,14 +27,26 @@ export function withoutFigures(text) {
     .trim()
 }
 
-/** `url` is their own invite link when they have one (invites.js), so the friend counts. */
-export function shareDraft(map, url = SHARE_URL) {
+/** Their three move titles, figures out, as lines to add to the message. */
+export function movesBlock(map) {
   const moves = (Array.isArray(map?.moves) ? map.moves : [])
     .map(m => withoutFigures(forReaders(m?.title)).replace(/[.\s]+$/, ''))
     .filter(Boolean)
     .slice(0, 3)
-  const lines = [`I made my plan on ${WAYOUT_NAME}. My next three moves:`]
-  moves.forEach((t, i) => lines.push(`${i + 1}. ${t}`))
-  lines.push('', `Yours is free: ${url}`)
+  if (!moves.length) return ''
+  return ['My next three moves:', ...moves.map((t, i) => `${i + 1}. ${t}`)].join('\n')
+}
+
+/**
+ * ⭐ ABOUT THE PRODUCT, NOT THEIR PLAN (Daniel, 6 Nov 2026: "why would you send
+ * someone you know your plan?"). Their moves are their life and mean nothing to
+ * the friend, so they are out unless the person adds them (`withMoves`).
+ * `url` is their own invite link when they have one (invites.js), so the friend counts.
+ */
+export function shareDraft(map, url = SHARE_URL, { withMoves = false } = {}) {
+  const lines = [`I have been using ${WAYOUT_NAME} to work out what to do first. Getting your plan is free, and the questions take ${WAYOUT_TOTAL_TIME}.`]
+  const moves = withMoves ? movesBlock(map) : ''
+  if (moves) lines.push('', moves)
+  lines.push('', `Yours: ${url}`)
   return lines.join('\n')
 }

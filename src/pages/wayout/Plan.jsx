@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
+import { hasEliv8Business } from '../../lib/handoffs'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import WayoutShell from './WayoutShell'
 import {
@@ -1015,7 +1016,15 @@ export function Map({
   const [bridgeShut, setBridgeShut] = useState(() => {
     try { return localStorage.getItem('wayout:bridge-eliv8') === 'closed' } catch { return false }
   })
-  const showBridge = !bridgeShut && !past && answers?.workType === 'self'
+  // ⚠️ Not for someone already running a business on Eliv8 OS: the Handoff
+  // card below is their Eliv8 card, and two of them said the same thing.
+  const [onEliv8, setOnEliv8] = useState(false)
+  useEffect(() => {
+    let live = true
+    hasEliv8Business().then(v => { if (live) setOnEliv8(Boolean(v)) }).catch(() => {})
+    return () => { live = false }
+  }, [])
+  const showBridge = !bridgeShut && !past && answers?.workType === 'self' && !onEliv8
     && ticked.size > 0 && !thread.some(e => e?.crisis)
   function shutBridge() {
     setBridgeShut(true)
@@ -1310,7 +1319,7 @@ export function Map({
       {/* Evidence of what is done, never praise (no rings, streaks or badges). */}
       {!past && Array.isArray(map.moves) && map.moves.length > 0 && (
         <div className="wayout__p2progress">
-          <Progress moves={map.moves} ticked={ticked} doneAt={progress?.doneAt ?? {}} earlier={earlier} />
+          <Progress moves={map.moves} ticked={ticked} doneAt={progress?.doneAt ?? {}} earlier={earlier} earlierOnly />
           <p className="wayout__planactions">
             <button type="button" className="wayout__again" onClick={() => remindMe(map.moves, ticked)}>Remind me in a week</button>
             <button type="button" className="wayout__again" onClick={() => window.print()}>Print or save as PDF</button>
@@ -1392,7 +1401,7 @@ export function Map({
       )}
 
       <section className="wayout__p2section">
-        <h2>Before you start</h2>
+        <h2>More about your plan</h2>
         <p className="wayout__p2lead">Open any of these. Nothing here is homework.</p>
 
         {/* ⭐⭐ WHAT IT TOOK AS GIVEN stays OPEN: it has to be said out loud
@@ -1422,8 +1431,7 @@ export function Map({
             <summary><span>Where most people get stuck <small>{map.stuck.length}</small></span><i aria-hidden="true">+</i></summary>
             <div className="wayout__p2in">
               {map.stuck.map((q, i) => <p key={i} className="wayout__p2item">{q}</p>)}
-              <p className="wayout__hint">Most people get stuck on these. The walkthrough shows you how to handle each one.</p>
-              {!past && onOpenPlaybook && <button type="button" className="wayout__p2small" onClick={() => onOpenPlaybook(1)}>Show me how</button>}
+              <p className="wayout__hint">Each move’s “How to do it” shows you how to handle these.</p>
             </div>
           </details>
         )}
@@ -1494,7 +1502,9 @@ export function Map({
           has already offered them work. The intake asks thirty questions and
           still cannot ask the one that matters to this person, so the product
           has to stay open after the plan rather than closing behind it. */}
-      {spent && <Spent />}
+      {/* ⚠️ The "you have already answered again once" line is off (6 Nov): it
+          showed all the time, under nothing, and read as a telling-off. With
+          the rebuild used, the link to it is simply not there. */}
 
       {/* Dev only — see regenerateNow. Deliberately plain and labelled, so it
           can never be mistaken for something a person is meant to see.
@@ -1526,7 +1536,11 @@ export function Map({
           ⚠️ Shown only when there is genuinely something to restore — the
           session carries the history, so an empty one draws nothing rather than
           a button that does not work. That was this morning's lesson. */}
-      {onRestore && (
+      {/* ⚠️ Only when the version buttons are not showing (Daniel, 6 Nov: "any
+          other redundancies"). With two or more versions up top, those buttons
+          already go back to an earlier plan, and two controls for one thing
+          read as two different things. */}
+      {onRestore && liveVersions(thread).length < 2 && (
         <p className="wayout__rebuild wayout__r" style={at(4.14)}>
           Not what you wanted?{' '}
           <button type="button" className="wayout__again" onClick={onRestore} disabled={rebuilding}>
@@ -1692,7 +1706,7 @@ const OUTCOME_SAID = {
   changed: 'You want something else now',
 }
 
-export function Progress({ moves, ticked, doneAt = {}, earlier = [], style }) {
+export function Progress({ moves, ticked, doneAt = {}, earlier = [], style, earlierOnly = false }) {
   /**
    * ⭐⭐ WHAT THEY HAVE ALREADY DONE — only that. Daniel, 2 Oct: "I meant what's
    * already completed, like first goals, steps, whatever — not steps coming up;
@@ -1707,7 +1721,9 @@ export function Progress({ moves, ticked, doneAt = {}, earlier = [], style }) {
   const chapters = earlier
     .map(c => ({ chapter: c.chapter, outcome: c.outcome, done: (c.moves ?? []).filter(m => m.doneAt) }))
     .filter(c => c.done.length)
-  const current = moves
+  // ⚠️ `earlierOnly` on the plan page (6 Nov): this plan's finished moves are
+  // already ticked on their own cards, so listing them again said it twice.
+  const current = earlierOnly ? [] : moves
     .map((m, i) => ({ title: m.title, order: i + 1, doneAt: doneAt[i + 1] }))
     .filter(m => ticked.has(m.order))
   if (!chapters.length && !current.length) return null

@@ -108,7 +108,7 @@ export default function PlanThread({
     <section className="wayout__card wayout__thread">
       <h3 className="wayout__label">Something changed?</h3>
       <p className="wayout__threadlead">
-        Your plan is based on your answers. If something in your life changes, tell us here and we will show you how it changes your plan.
+        Tell us what changed and we will show you how it changes your plan.
       </p>
 
       {/* ⭐⭐ THE VERSIONS, NOT THE TRANSCRIPT. Daniel: "this should just show
