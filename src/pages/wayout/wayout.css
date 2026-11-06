@@ -3995,3 +3995,49 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
 .wayout__ovold[open] > summary { margin-bottom: 12px; }
 @media (prefers-reduced-motion: reduce) { .wayout__ovfold summary i { transition: none; } }
 @media print { .wayout__ovfold > .wayout__ovbody { display: block; } .wayout__ovask { display: none; } }
+
+/* ⭐⭐ THE PLAN, SIMPLER (6 Nov 2026: "it needs to feel simple not daunting";
+   mock-up https://claude.ai/artifact/UQKPUPmdNhowKqkFaVM2F4, "ok its better"). */
+.wayout__p2ready small { font-size: inherit; font-weight: 800; color: var(--p-muted); }
+.wayout__versopen { display: inline-flex; align-items: center; gap: 6px; margin: 12px auto 0; border: 0; background: none; padding: 4px 8px;
+  font: inherit; font-weight: 800; font-size: 14px; color: var(--p-muted); cursor: pointer; }
+.wayout__versopen u { text-underline-offset: 3px; }
+.wayout__versopen:hover { color: var(--ink); }
+.wayout__versions.is-compact { margin-top: 10px; }
+.wayout__versions.is-compact .wayout__versionnote { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.wayout__threadhist { margin: 6px 0 4px; }
+.wayout__threadhist > summary { cursor: pointer; list-style: none; display: inline-flex; gap: 8px; align-items: center; font-weight: 800; font-size: 14px;
+  color: var(--soft); text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
+.wayout__threadhist > summary::-webkit-details-marker { display: none; }
+.wayout__threadhist > summary small { text-decoration: none; background: #EFE8D6; color: var(--ink); border-radius: 999px; padding: 0 8px; font-size: 12px; }
+.wayout__threadhist[open] > summary { margin-bottom: 10px; }
+.wayout__p2moves { align-items: start; }
+.wayout__p2move.is-small { padding: 18px 20px 14px; }
+.wayout__p2move.is-small h3 { margin: 10px 0 0; font-size: 17px; color: var(--p-muted); }
+.wayout__p2again > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; }
+.wayout__p2again > summary::-webkit-details-marker { display: none; }
+.wayout__p2doneat { font-size: 13px; font-weight: 900; color: var(--p-green-d); }
+.wayout__p2look { font-size: 13px; font-weight: 800; color: var(--p-muted); text-decoration: underline; text-underline-offset: 3px; }
+.wayout__p2look i { display: inline-block; font-style: normal; transition: transform .2s; }
+.wayout__p2again[open] .wayout__p2look i { transform: rotate(180deg); }
+.wayout__p2againin { animation: wayout-p2open .25s ease-out; }
+.wayout__p2againin .wayout__p2detail { margin-top: 4px; }
+@keyframes wayout-p2open { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.wayout__p2small.is-strong { color: var(--p-green-d); }
+.wayout__p2here { position: absolute; top: -34px; right: 16px; background: var(--p-sky); color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .08em;
+  text-transform: uppercase; border-radius: 999px; padding: 4px 10px; box-shadow: 0 3px 0 var(--p-sky-d); }
+.wayout__p2move.is-m1 .wayout__p2here { background: var(--p-amber); box-shadow: 0 3px 0 var(--p-amber-d); }
+.wayout__p2move.is-m2 .wayout__p2here { background: var(--p-coral); box-shadow: 0 3px 0 var(--p-coral-d); }
+.wayout__p2fold .wayout__p2figs { margin-bottom: 4px; }
+.wayout__p2fold .wayout__p2figs b { font-size: 28px; }
+.wayout__p2tail { margin-top: 34px; display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 22px; }
+.wayout__p2tlink { border: 0; background: none; padding: 4px; font: inherit; font-size: 14px; font-weight: 800; color: var(--p-muted);
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.wayout__p2tlink:hover { color: var(--ink); }
+@media (max-width: 820px) { .wayout__p2here { top: 12px; right: 14px; } }
+@media (prefers-reduced-motion: reduce) { .wayout__p2againin { animation: none; } .wayout__p2look i { transition: none; } }
+@media print { .wayout__p2tail, .wayout__versopen { display: none !important; } .wayout__p2again .wayout__p2againin { display: block; } }
+/* "Something changed?" in the plan's own look (the mock-up's amber-edged card). */
+.wayout__plan2 .wayout__thread { background: #fff; border-radius: 22px; padding: 22px; box-shadow: 0 4px 0 var(--p-line); border: 0; border-left: 8px solid var(--p-amber); }
+.wayout__plan2 .wayout__thread::before { display: none; }
+.wayout__plan2 .wayout__thread > .wayout__label:first-child { font-size: 24px; font-weight: 900; letter-spacing: -.01em; text-transform: none; color: var(--ink); }

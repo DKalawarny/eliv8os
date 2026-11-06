@@ -118,6 +118,12 @@ export default function PlanThread({
           ⚠️ Deleting lives on the × above the moves, not here: two places to
           delete the same thing is how "Drop this idea" came to sit under a
           sentence and read as deleting the original plan. */}
+      {/* ⭐ FOLDED (Daniel, 6 Nov 2026: the plan page was "messy"). The same
+          versions are a tap away at the top, so here they wait behind one link
+          instead of filling the box people come to type in. */}
+      {plans.length > 0 && (
+      <details className="wayout__threadhist">
+        <summary>See your earlier versions <small>{plans.length}</small></summary>
       {plans.length > 0 && (
         <ol className="wayout__versionlist">
           {plans.filter(v => !v.crossed).map(v => (
@@ -152,13 +158,15 @@ export default function PlanThread({
           {plans.filter(v => v.crossed).map(v => (
             <div key={v.key} className="wayout__versioncutrow">
               <s>V{v.n} “{v.about ?? 'Rewritten'}”</s>
-              <span>{v.crossed.why}</span>
+              <span>{forReaders(v.crossed.why)}</span>
               {onBringBack && !quiet && (
                 <button type="button" className="wayout__threadundo" onClick={() => onBringBack(v.key)}>Bring it back</button>
               )}
             </div>
           ))}
         </div>
+      )}
+      </details>
       )}
 
       {/* ⭐⭐ THE IDEA IN PROGRESS IS ONE THING, SHAPED LIKE THE VERSIONS IT IS
@@ -304,16 +312,33 @@ function toPlan() {
  */
 export function VersionSwitch({
   thread = [], liveMap = null, onSwitch, onRemove, onChoose, onGoWith, choosing = false, chooseErr = '', disabled = false,
+  compact = false,
 }) {
   const [asking, setAsking] = useState(null)
+  // ⭐ `compact` (Daniel, 6 Nov 2026: the top of the plan was "messy and
+  // daunting"): one quiet line, "Version 6 of your plan ▾", that opens the
+  // switch. The versions are a thing you look at sometimes, not every visit.
+  const [shown, setShown] = useState(false)
   const plans = liveVersions(thread)
   if (plans.length < 2) return null
   const choice = currentChoice(thread)
   const showing = showingKey(thread, liveMap)
   const on = plans.find(v => v.key === showing)
   const doomed = plans.find(v => v.key === asking)
+  if (compact && !shown) {
+    return (
+      <button type="button" className="wayout__versopen" id="wayout-versions" aria-expanded="false" onClick={() => setShown(true)}>
+        <u>{on ? (on.key === -1 ? 'Your original plan' : `${on.label} of your plan`) : 'Your versions'}</u> <span aria-hidden="true">▾</span>
+      </button>
+    )
+  }
   return (
-    <div className="wayout__versions" id="wayout-versions" role="group" aria-label="Which version of your plan is showing">
+    <div className={`wayout__versions${compact ? ' is-compact' : ''}`} id="wayout-versions" role="group" aria-label="Which version of your plan is showing">
+      {compact && (
+        <button type="button" className="wayout__versopen" aria-expanded="true" onClick={() => setShown(false)}>
+          <u>Hide versions</u> <span aria-hidden="true">▴</span>
+        </button>
+      )}
       <p className="wayout__versionshead">The version you are looking at</p>
       <div className="wayout__versionsrow">
         {plans.map(v => (

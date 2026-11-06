@@ -21,10 +21,13 @@ import { bookOnShelf } from '../../content/wayoutReading'
 import { Marked } from '../../lib/wayout/marked.jsx'
 import CrisisHelp from './CrisisHelp'
 import { bridgeToEliv8 } from '../../lib/bridges'
-import Bridge from './Bridge'
 import Handoff from './Handoff'
 import ShareCard from './ShareCard'
 import InviteConsent from './InviteConsent'
+
+const shortDate = iso => {
+  try { return new Date(iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }) } catch { return '' }
+}
 
 /**
  * The way out — S7, the reveal.
@@ -982,6 +985,7 @@ export function Map({
   // The reveal: which move's full detail is open, and the rest of what the plan heard.
   const [openMove, setOpenMove] = useState(null)
   const [seenOpen, setSeenOpen] = useState(false)
+  const [tailOpen, setTailOpen] = useState(null)
   const firstName = String(answers?.name ?? '').trim().split(/\s+/)[0] || ''
 
   /**
@@ -1013,7 +1017,7 @@ export function Map({
    * (a move ticked), it is their live plan, and nothing in the thread is a
    * crisis. Closed once, gone for good.
    */
-  const [bridgeShut, setBridgeShut] = useState(() => {
+  const [bridgeShut] = useState(() => {
     try { return localStorage.getItem('wayout:bridge-eliv8') === 'closed' } catch { return false }
   })
   // ⚠️ Not for someone already running a business on Eliv8 OS: the Handoff
@@ -1026,10 +1030,6 @@ export function Map({
   }, [])
   const showBridge = !bridgeShut && !past && answers?.workType === 'self' && !onEliv8
     && ticked.size > 0 && !thread.some(e => e?.crisis)
-  function shutBridge() {
-    setBridgeShut(true)
-    try { localStorage.setItem('wayout:bridge-eliv8', 'closed') } catch { /* private mode */ }
-  }
 
   /**
    * ⭐⭐ THE EVENT, NOT THE STATE. Rendering the card is not the same as marking
@@ -1150,14 +1150,10 @@ export function Map({
             {ticked.size
               ? `Welcome back${firstName ? `, ${firstName}` : ''}`
               : `${firstName ? `${firstName}, your` : 'Your'} plan is ready`}
+            {/* ⭐ The chapter rides in the hello line (6 Nov 2026, "simple, not
+                daunting"); it used to be its own band. Progress is in the fold. */}
+            {chapter > 1 && <small> · Chapter {chapter}</small>}
           </span>
-        )}
-        {!past && chapter > 1 && (
-          <div className="wayout__chapterband">
-            <b>Chapter {chapter}</b>
-            <span>Built from what actually happened last time.</span>
-            <Link to={`${WAYOUT_BASE}/history`}>See all your progress →</Link>
-          </div>
         )}
         {/* The yellow mark is kept, with the `derive` fallback (see Marked). */}
         <h1 className="wayout__p2title"><Marked text={map.headline} highlight={map.highlight} derive /></h1>
@@ -1166,7 +1162,7 @@ export function Map({
             thread={thread} liveMap={liveMap} disabled={rebuilding || locked}
             onSwitch={onSwitchVersion ?? undefined} onRemove={onRemoveVersion ?? undefined}
             onChoose={onChoose ?? undefined} onGoWith={onGoWith ?? undefined}
-            choosing={choosing} chooseErr={chooseErr}
+            choosing={choosing} chooseErr={chooseErr} compact
           />
         )}
         {/* What the plan heard. Two sentences, the rest a tap away: a long
@@ -1192,7 +1188,6 @@ export function Map({
             {/* The honest line, beside the button (Daniel: "a suggested plan, up
                 to you"). Also why people dare to start: nothing here is final. */}
             <p className="wayout__p2calm">This is our suggestion, based on your answers. You can change any of it.</p>
-            <a className="wayout__p2more" href="#wayout-whole">See the whole plan ↓</a>
           </div>
         )}
       </header>
@@ -1220,8 +1215,40 @@ export function Map({
               const theirs = moveNotes?.[order]
               const full = `${m.detail ?? ''}${m.season ? ` ${m.season}` : ''}`
               const short = leadSentences(full, 1)
+              const doneOn = progress?.doneAt?.[order]
+              /* ⭐⭐ A FINISHED MOVE IS SMALL, AND YOU CAN LOOK BACK (Daniel, 6 Nov
+                 2026: "can this be able to be dropped down so you can go back to
+                 see"). The tick and the title; the rest opens on "Look back". */
+              if (isDone && !past && openNote !== order) {
+                return (
+                  <article key={order} className={`wayout__p2move is-m${order} is-done is-small`}>
+                    <span className="wayout__p2num">✓</span>
+                    <h3>{m.title}</h3>
+                    <details className="wayout__p2again">
+                      <summary>
+                        <span className="wayout__p2doneat">{doneOn ? `Done ${shortDate(doneOn)}` : 'Done'}</span>
+                        <span className="wayout__p2look">Look back <i aria-hidden="true">▾</i></span>
+                      </summary>
+                      <div className="wayout__p2againin">
+                        {m.when && <p className="wayout__p2when">{m.when}</p>}
+                        {full && <p className="wayout__p2detail">{full}</p>}
+                        {m.gate && (
+                          <div className="wayout__p2gate"><b>What finished looked like</b><span>{m.gate}</span></div>
+                        )}
+                        {theirs && <div className="wayout__yours"><b>Your note</b><p>{theirs}</p></div>}
+                        <div className="wayout__p2acts">
+                          {onOpenPlaybook && <button type="button" className="wayout__p2small is-strong" onClick={() => onOpenPlaybook(order)}>How you did it</button>}
+                          <button type="button" className="wayout__p2small" onClick={() => toggle(i)}>Not done after all</button>
+                        </div>
+                      </div>
+                    </details>
+                  </article>
+                )
+              }
+              const isHere = !past && nextMove === m
               return (
                 <article key={order} className={`wayout__p2move is-m${order}${isDone ? ' is-done' : ''}`}>
+                  {isHere && ticked.size > 0 && <span className="wayout__p2here">You are here</span>}
                   <span className="wayout__p2num">{isDone ? '✓' : order}</span>
                   {m.when && <p className="wayout__p2when">{m.when}</p>}
                   <h3>{m.title}</h3>
@@ -1316,16 +1343,6 @@ export function Map({
         </section>
       )}
 
-      {/* Evidence of what is done, never praise (no rings, streaks or badges). */}
-      {!past && Array.isArray(map.moves) && map.moves.length > 0 && (
-        <div className="wayout__p2progress">
-          <Progress moves={map.moves} ticked={ticked} doneAt={progress?.doneAt ?? {}} earlier={earlier} earlierOnly />
-          <p className="wayout__planactions">
-            <button type="button" className="wayout__again" onClick={() => remindMe(map.moves, ticked)}>Remind me in a week</button>
-            <button type="button" className="wayout__again" onClick={() => window.print()}>Print or save as PDF</button>
-          </p>
-        </div>
-      )}
 
       {map.moves?.length > 0 && ticked.size >= map.moves.length && (
         <div className={`wayout__allthree${justFinished ? ' is-new' : ''}`} ref={finishRef}>
@@ -1343,41 +1360,6 @@ export function Map({
       )}
 
       <div id="wayout-whole" />
-      {Array.isArray(map.stats) && map.stats.length > 0 && (
-        <section className="wayout__p2section">
-          <h2>Where you’re starting</h2>
-          {/* Credit before the hole, only when the shortfall came from their own figures. */}
-          {map.stats.some(x => x.tone === 'hard') && (
-            <p className="wayout__p2lead">
-              You put every number down{String(answers?.debt ?? '').trim() ? ', the debt included' : ''}. Most people never get that far, and it is why your plan can be this specific.
-            </p>
-          )}
-          {/* ⭐ ONE CARD, NOT TWO (Daniel, 6 Nov: "should these be combined").
-              Two cards said the same $2,500 twice: once as a number, once in
-              the other card's caption. The two figures sit side by side in one
-              card with one line under them, the caption that does the sum. */}
-          <div className="wayout__p2stats">
-            <div className="wayout__p2stat">
-              <div className="wayout__p2figs">
-                {map.stats.slice(0, 2).map((st, i) => (
-                  <div className={st.tone === 'hard' ? 'is-hard' : undefined} key={i}>
-                    <span>{st.label}</span>
-                    <b>{st.tone === 'good'
-                      ? <CountUp value={Number(st.value) || 0} prefix={st.prefix} suffix={st.suffix} />
-                      : <StatNum value={Number(st.value) || 0} prefix={st.prefix} suffix={st.suffix} />}</b>
-                  </div>
-                ))}
-              </div>
-              {statLine(map.stats.slice(0, 2)) && <em>{statLine(map.stats.slice(0, 2))}</em>}
-            </div>
-          </div>
-          <p className="wayout__p2hope">
-            {map.stats.some(x => x.tone === 'good')
-              ? 'You already bring in more than you have to pay each month. Your plan is about what you do with the extra.'
-              : 'You are starting from here, not staying here. The moves above are built to change these numbers, one at a time.'}
-          </p>
-        </section>
-      )}
 
       {!past && onSay && (
         <section className="wayout__p2section">
@@ -1404,10 +1386,35 @@ export function Map({
         <h2>More about your plan</h2>
         <p className="wayout__p2lead">Open any of these. Nothing here is homework.</p>
 
-        {/* ⭐⭐ WHAT IT TOOK AS GIVEN stays OPEN: it has to be said out loud
-            before they act (Daniel: "so many assumptions here"). */}
+        {/* ⭐ Their month, folded (6 Nov 2026, "simple, not daunting"). It was
+            its own section; the line on the summary says the sum. */}
+        {Array.isArray(map.stats) && map.stats.length > 0 && (
+          <details className="wayout__p2fold">
+            <summary><span>Your month{statLine(map.stats.slice(0, 2)) && <small>{statLine(map.stats.slice(0, 2))}</small>}</span><i aria-hidden="true">+</i></summary>
+            <div className="wayout__p2in">
+              <div className="wayout__p2figs">
+                {map.stats.slice(0, 2).map((st, i) => (
+                  <div className={st.tone === 'hard' ? 'is-hard' : undefined} key={i}>
+                    <span>{st.label}</span>
+                    <b><StatNum value={Number(st.value) || 0} prefix={st.prefix} suffix={st.suffix} /></b>
+                  </div>
+                ))}
+              </div>
+              <p className="wayout__p2item">
+                {map.stats.some(x => x.tone === 'good')
+                  ? 'You already bring in more than you have to pay each month. Your plan is about what you do with the extra.'
+                  : 'You are starting from here, not staying here. The moves are built to change these numbers, one at a time.'}
+              </p>
+            </div>
+          </details>
+        )}
+
+        {/* ⭐⭐ WHAT IT TOOK AS GIVEN was open by default (Daniel: "so many
+            assumptions here"). Closed since 6 Nov 2026 with the rest of the
+            folds, in the mock-up he approved ("simple not daunting"); the count
+            on the row still says they are there. */}
         {Array.isArray(map.assumptions) && map.assumptions.length > 0 && (
-          <details className="wayout__p2fold" open>
+          <details className="wayout__p2fold">
             <summary><span>What your plan assumes <small>{map.assumptions.length}</small></span><i aria-hidden="true">+</i></summary>
             <div className="wayout__p2in">
               {map.assumptions.map((a, i) => <p key={i} className="wayout__p2item">{a}</p>)}
@@ -1472,14 +1479,37 @@ export function Map({
             </div>
           </details>
         )}
+
+        {/* Earlier chapters' finished moves (this plan's are ticked on their
+            own cards), folded with the rest. */}
+        {!past && earlier.some(c => (c.moves ?? []).some(x => x.doneAt)) && (
+          <details className="wayout__p2fold">
+            <summary><span>What you did before</span><i aria-hidden="true">+</i></summary>
+            <div className="wayout__p2in">
+              <Progress moves={map.moves ?? []} ticked={ticked} doneAt={progress?.doneAt ?? {}} earlier={earlier} earlierOnly />
+            </div>
+          </details>
+        )}
       </section>
+
+      {/* ⭐ THE TAIL IS LINKS, NOT BOXES (6 Nov 2026, "simple, not daunting").
+          Each opens only when tapped. */}
+      {!past && (
+        <div className="wayout__p2tail">
+          {Array.isArray(map.moves) && map.moves.length > 0 && (
+            <button type="button" className="wayout__p2tlink" onClick={() => remindMe(map.moves, ticked)}>Remind me in a week</button>
+          )}
+          <button type="button" className="wayout__p2tlink" onClick={() => window.print()}>Print or save as PDF</button>
+          <button type="button" className="wayout__p2tlink" aria-expanded={tailOpen === 'share'} onClick={() => setTailOpen(o => (o === 'share' ? null : 'share'))}>Know someone stuck? Send them a link</button>
+          {showBridge && (
+            <a className="wayout__p2tlink" href={bridgeToEliv8('plan').href} target="_blank" rel="noopener">{bridgeToEliv8('plan').label}</a>
+          )}
+        </div>
+      )}
       </div>
 
-      {/* ⭐ After our own offer, never before it: an addition, not a switch. */}
-      {showBridge && <Bridge {...bridgeToEliv8('plan')} onClose={shutBridge} />}
-
-      {/* ⭐ Their three moves, figures out, for a friend (ShareCard.jsx). */}
-      {!past && <ShareCard map={map} movesDone={ticked.size} />}
+      {/* ⭐ Their invite, product first (ShareCard.jsx), opened from the tail. */}
+      {!past && tailOpen === 'share' && <ShareCard map={map} movesDone={ticked.size} />}
       {!past && <InviteConsent />}
 
       {/* ⭐ The shared summary with Eliv8 OS (Handoff.jsx). Their words only. */}
