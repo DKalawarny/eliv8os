@@ -4123,3 +4123,11 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
 @media (max-width: 760px) { .wayout__i2find { grid-template-columns: auto 1fr; } .wayout__i2find .wayout__i2go { grid-column: 1 / -1; text-align: center; } }
 @media (prefers-reduced-motion: reduce) { .wayout__i2find, .wayout__i2welcome { animation: none; } }
 .wayout__i2soon { margin: 12px 0 0; text-align: center; font-size: 14px; font-weight: 800; color: var(--p-amber-d); }
+.wayout__i2label { display: block; margin: 12px 0 6px; font-size: 13px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--p-muted); }
+.wayout__i2edit { width: 100%; box-sizing: border-box; border: 2px solid var(--p-line); border-radius: 14px; padding: 12px 14px; font: inherit; font-size: 16px; font-weight: 600; color: var(--ink); background: #fff; resize: vertical; }
+.wayout__i2edit:focus { outline: 0; border-color: var(--p-sky); }
+.wayout__i2lockedhead { margin: 10px 0 4px !important; font-size: 13px; font-weight: 800; color: var(--p-muted); }
+.wayout__i2locked { margin: 0 0 12px; background: #F6F1E6; color: var(--p-muted); border: 2px solid var(--p-line); border-radius: 14px; padding: 12px 14px; font-weight: 600; white-space: pre-wrap; overflow-wrap: anywhere; }
+.wayout__i2or { margin-top: 20px; padding-top: 16px; border-top: 2px dashed var(--p-line); }
+.wayout__i2or > p { margin: 0; color: var(--p-muted); font-weight: 700; font-size: 15px; }
+.wayout__i2card .wayout__input { width: 100%; }

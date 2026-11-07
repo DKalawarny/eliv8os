@@ -4,7 +4,7 @@ import WayoutShell from './WayoutShell'
 import { Confirm } from './PlanThread'
 import { WAYOUT_BASE } from '../../lib/wayout/brand'
 import { WAYOUT_REFERRAL_LIVE, WAYOUT_FRIEND_DISCOUNT_LABEL, WAYOUT_FRIEND_DISCOUNT_THEIR, WAYOUT_CODE_DAYS, WAYOUT_REFERRAL_SHARE_LABEL, WAYOUT_REFERRAL_ANNOUNCED, referralLine } from '../../lib/wayout/pricing'
-import { shareDraft } from '../../lib/wayout/shareText'
+import { inviteParts, joinInvite } from '../../lib/wayout/shareText'
 import {
   myInvites, myInvite, setShowName, createInvite, deleteInvite, inviteUrl, inviteTotals, friendStage,
   myReferral, answerReferral, claimInvite,
@@ -36,7 +36,8 @@ export default function Invite() {
   const [copied, setCopied] = useState('')
   const [ref, setRef] = useState(null)
   const [doomed, setDoomed] = useState(null)
-  const [made, setMade] = useState(null)
+  // Their own words for the top of the message, kept in this browser.
+  const [intro, setIntro] = useState(() => { try { return localStorage.getItem('wayout:invite-intro-text') } catch { return null } })
 
   const load = useCallback(async () => {
     try {
@@ -59,18 +60,6 @@ export default function Invite() {
       await copy(text, 'message')
     } catch (e) { if (e?.name !== 'AbortError') setNote('That did not open. Copy the message instead.') }
   }
-  async function make(e) {
-    e.preventDefault()
-    if (!label.trim()) return
-    setBusy(true); setNote('')
-    try {
-      const code = await createInvite(label.trim())
-      setMade({ code, label: label.trim() })
-      setLabel('')
-      await load()
-    } catch (err) { setNote(err.message) }
-    finally { setBusy(false) }
-  }
   async function toggleName(show) {
     try { await setShowName(show); setMine(m => ({ ...m, show_name: show })) } catch (e) { setNote(e.message) }
   }
@@ -83,7 +72,23 @@ export default function Invite() {
 
   const totals = inviteTotals(invites)
   const mainUrl = mine?.code ? inviteUrl(mine.code) : ''
-  const message = mainUrl ? shareDraft(null, mainUrl, { code: mine?.short }) : ''
+  const parts = mainUrl ? inviteParts(mainUrl, mine?.short) : { intro: '', locked: '' }
+  const introText = intro ?? parts.intro
+  const saveIntro = t => { setIntro(t); try { localStorage.setItem('wayout:invite-intro-text', t) } catch { /* private mode */ } }
+  // ⭐ ONE PLACE TO SEND FROM (Daniel, 7 Nov: two kinds of link were "confusing").
+  // A name in the box gets that person their own link, so you see when they
+  // join; no name uses your main link.
+  async function sendTo(how) {
+    setBusy(true); setNote('')
+    try {
+      const who = label.trim()
+      const url = who ? inviteUrl(await createInvite(who)) : mainUrl
+      const text = joinInvite(introText, inviteParts(url, mine?.short).locked)
+      if (how === 'copy') await copy(text, 'message'); else await share(text)
+      if (who) { setLabel(''); setNote(`${who} has their own link in that message. You will see here when they join.`); await load() }
+    } catch (err) { setNote(err.message) }
+    finally { setBusy(false) }
+  }
   const people = invites.flatMap(i => {
     const joined = (i.friends ?? []).map(f => ({ ...f, from: i.label, stage: friendStage(f) }))
     if (!i.is_main && !joined.length) return [{ waiting: true, label: i.label, code: i.code, opened: i.opened, at: i.created_at }]
@@ -133,28 +138,36 @@ export default function Invite() {
 
         {mine?.code && (
           <section className="wayout__i2card is-sky">
-            <h2>Your link and code</h2>
-            <p>{WAYOUT_REFERRAL_LIVE
-              ? 'Anyone who joins with either one gets their discount, and you see that they joined.'
-              : 'One link for anyone. Post it, text it, put it in a group chat. Everyone who joins through it shows here.'}</p>
-            <div className="wayout__i2link">
-              <code>{mainUrl.replace(/^https?:\/\//, '').replace(/&utm_source=invite$/, '')}</code>
-              <button type="button" onClick={() => copy(mainUrl, 'link')}>{copied === 'link' ? 'Copied' : 'Copy'}</button>
-            </div>
-            {mine.short && (
-              <p className="wayout__i2code">
-                Your code: <b>{mine.short}</b>{' '}
-                {WAYOUT_REFERRAL_LIVE ? 'They type it when they sign up to get their discount.' : `If they forgot the link, they can type it in their first ${WAYOUT_CODE_DAYS} days.`}
-              </p>
+            <h2>Send it to someone</h2>
+            <label className="wayout__i2label" htmlFor="wayout-invite-label">Who is it for? Optional, only you see it</label>
+            <input id="wayout-invite-label" className="wayout__input" value={label} maxLength={40} placeholder="For example: Mike from church" onChange={e => setLabel(e.target.value)} />
+            <p className="wayout__i2fine" style={{ marginTop: 4 }}>Add a name and they get their own link, so you can see when they join.</p>
+            <label className="wayout__i2label" htmlFor="wayout-invite-intro">Your message</label>
+            <textarea id="wayout-invite-intro" className="wayout__i2edit" rows={3} maxLength={600} value={introText} onChange={e => saveIntro(e.target.value)} />
+            {intro != null && intro !== parts.intro && (
+              <button type="button" className="wayout__i2quiet" onClick={() => { setIntro(null); try { localStorage.removeItem('wayout:invite-intro-text') } catch { /* private mode */ } }}>Go back to our wording</button>
             )}
-            <details className="wayout__i2msg">
-              <summary>What to send with it</summary>
-              <blockquote>{message}</blockquote>
-              <div className="wayout__i2row">
-                <button type="button" className="wayout__i2btn" onClick={() => share(message)}>Send the message</button>
-                <button type="button" className="wayout__i2quiet" onClick={() => copy(message, 'message')}>{copied === 'message' ? 'Copied' : 'Copy it'}</button>
+            <p className="wayout__i2lockedhead">Added underneath, so it counts and they know you get something</p>
+            <blockquote className="wayout__i2locked">{label.trim() ? parts.locked.replace(mainUrl, `(${label.trim()}’s own link)`) : parts.locked}</blockquote>
+            <div className="wayout__i2row">
+              <button type="button" className="wayout__i2btn" disabled={busy} onClick={() => sendTo('share')}>{label.trim() ? `Send to ${label.trim()}` : 'Send the message'}</button>
+              <button type="button" className="wayout__i2quiet" disabled={busy} onClick={() => sendTo('copy')}>{copied === 'message' ? 'Copied' : 'Copy it'}</button>
+            </div>
+            {note && <p role="status" className="wayout__i2fine">{note}</p>}
+
+            <div className="wayout__i2or">
+              <p>Or share your link anywhere, like a post or a group chat:</p>
+              <div className="wayout__i2link">
+                <code>{mainUrl.replace(/^https?:\/\//, '').replace(/&utm_source=invite$/, '')}</code>
+                <button type="button" onClick={() => copy(mainUrl, 'link')}>{copied === 'link' ? 'Copied' : 'Copy'}</button>
               </div>
-            </details>
+              {mine.short && (
+                <p className="wayout__i2code">
+                  Your code: <b>{mine.short}</b>{' '}
+                  {WAYOUT_REFERRAL_LIVE ? 'They type it when they sign up to get their discount.' : `If they forgot the link, they can type it in their first ${WAYOUT_CODE_DAYS} days.`}
+                </p>
+              )}
+            </div>
             <label className="wayout__i2toggle">
               <input id="wayout-show-name" type="checkbox" checked={mine.show_name !== false} onChange={e => toggleName(e.target.checked)} />
               Show my first name to people who open my link
@@ -163,21 +176,6 @@ export default function Invite() {
           </section>
         )}
 
-        <section className="wayout__i2card is-amber">
-          <h2>Want to see who joined? Make a link for one person</h2>
-          <p>The name is only for you. They never see it.</p>
-          <form className="wayout__i2row" onSubmit={make}>
-            <input id="wayout-invite-label" className="wayout__input" value={label} maxLength={40} placeholder="For example: Mike from church" aria-label="Who is this link for?" onChange={e => setLabel(e.target.value)} />
-            <button type="submit" className="wayout__i2btn" disabled={busy || !label.trim()}>Make their link</button>
-          </form>
-          {made && (
-            <div className="wayout__i2link">
-              <code>{inviteUrl(made.code).replace(/^https?:\/\//, '').replace(/&utm_source=invite$/, '')}</code>
-              <button type="button" onClick={() => share(shareDraft(null, inviteUrl(made.code), { code: mine?.short }))}>Send it to {made.label}</button>
-            </div>
-          )}
-          {note && <p role="status" className="wayout__i2fine">{note}</p>}
-        </section>
 
         {people.length > 0 && (
           <section className="wayout__i2people">

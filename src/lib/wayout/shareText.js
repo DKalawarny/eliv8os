@@ -59,3 +59,16 @@ export function shareDraft(map, url = SHARE_URL, { withMoves = false, code = '',
   lines.push('', `Yours: ${url}`)
   return lines.join('\n')
 }
+
+/**
+ * ⭐ THE MESSAGE IN TWO PARTS (Daniel, 7 Nov 2026: "this should be editable,
+ * not the code but the text"). `intro` is theirs to rewrite; `locked` is the
+ * part that must stay: how to sign up through them, the code, the disclosure
+ * that they get something (required by the invite terms), and the link.
+ */
+export function inviteParts(url, code = '', opts = {}) {
+  const full = shareDraft(null, url, { code, ...opts })
+  const at = full.indexOf('\n\n')
+  return { intro: full.slice(0, at), locked: full.slice(at + 2) }
+}
+export const joinInvite = (intro, locked) => `${String(intro ?? '').trim()}\n\n${locked}`.trim()

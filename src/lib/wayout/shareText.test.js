@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { shareDraft, withoutFigures, SHARE_URL } from './shareText'
+import { shareDraft, withoutFigures, SHARE_URL, inviteParts, joinInvite } from './shareText'
 
 describe('a shared plan carries no money figures', () => {
   it('takes out every figure, in every shape the plans write them', () => {
@@ -60,5 +60,21 @@ describe('announced before payments (7 Nov: "there is no incentive showing")', (
   it('says what will happen, in the future tense, with the disclosure', () => {
     const t = shareDraft(null, 'https://getunstuckmap.com/?i=abc', { code: 'DANNY-4F2', live: false, announced: true })
     expect(t).toContain('When paid plans open, it gets you half off your first month, and I get 20% of what you pay if you stay.')
+  })
+})
+
+describe('the invite message, editable top and fixed bottom', () => {
+  it('keeps the code, the disclosure and the link out of the editable part', () => {
+    const { intro, locked } = inviteParts('https://getunstuckmap.com/?i=abc', 'DANNY-B3A', { live: false, announced: true })
+    expect(intro).toMatch(/^I have been using Unstuck Map/)
+    expect(intro).not.toMatch(/DANNY|20%|https/)
+    expect(locked).toContain('DANNY-B3A')
+    expect(locked).toContain('I get 20% of what you pay')
+    expect(locked).toContain('https://getunstuckmap.com/?i=abc')
+  })
+  it('whatever they write on top, the fixed part still goes', () => {
+    const { locked } = inviteParts('https://getunstuckmap.com/?i=abc', 'DANNY-B3A', { live: false, announced: true })
+    expect(joinInvite('  Hey Mike, try this.  ', locked)).toBe(`Hey Mike, try this.\n\n${locked}`)
+    expect(joinInvite('', locked)).toBe(locked)
   })
 })
