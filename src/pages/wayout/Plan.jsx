@@ -986,6 +986,14 @@ export function Map({
   const [openMove, setOpenMove] = useState(null)
   const [seenOpen, setSeenOpen] = useState(false)
   const [tailOpen, setTailOpen] = useState(null)
+  const [booksHidden, setBooksHidden] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wayout:books-hidden') || '[]') } catch { return [] }
+  })
+  function hideBook(title) {
+    const next = [...new Set([...booksHidden, title])]
+    setBooksHidden(next)
+    try { localStorage.setItem('wayout:books-hidden', JSON.stringify(next)) } catch { /* private mode */ }
+  }
   const firstName = String(answers?.name ?? '').trim().split(/\s+/)[0] || ''
 
   /**
@@ -1468,7 +1476,7 @@ export function Map({
           </details>
         )}
 
-        {map.read?.title && (
+        {map.read?.title && !booksHidden.includes(map.read.title) && (
           <details className="wayout__p2fold">
             <summary><span>A book that could help</span><i aria-hidden="true">+</i></summary>
             <div className="wayout__p2in wayout__read">
@@ -1476,6 +1484,10 @@ export function Map({
               {map.read.why && <p className="wayout__hint">{map.read.why}</p>}
               {/* The caveat is ours, from our own file, always. */}
               {bookOnShelf(map.read.title)?.hold && <p className="wayout__hold">{bookOnShelf(map.read.title).hold}</p>}
+              {/* ⭐ Daniel, 7 Nov 2026: "a weird book recommendation for my plan".
+                  The rule is tighter now (prompts.ts), and a book already on a
+                  plan can be put away. Kept in this browser only: a preference. */}
+              {!past && <button type="button" className="wayout__p2small" onClick={() => hideBook(map.read.title)}>Not for me, hide this</button>}
             </div>
           </details>
         )}

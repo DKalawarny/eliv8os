@@ -3978,6 +3978,15 @@ when you have not got an answer. They have three moves and a week to start; a
 book is a door beside the door, for the part of this that is about how they SEE
 it rather than what they do on Saturday.
 
+🔴 THE BOOK FITS THIS PLAN, NOT THEIR PAST. Daniel, 7 Nov 2026, on a plan
+about buying land in Merida, building rentals and launching two apps, handed a
+book about the service businesses he had already left: "a weird book
+recommendation for my plan". Pick it for what THIS plan has them doing: the
+first move, or where they said they want to be. Never for the work they are
+leaving, a business they have closed, or a struggle the plan has already
+moved past. If nothing on the shelf fits the moves in front of them, "read" is
+null. No book is a better answer than a book about someone they used to be.
+
 ⚠️ "why" is about THEM, not about the book. "You said you do not know what
 enough is, and that is the whole subject of this one" — not a review, not a
 summary, not what it argues.
