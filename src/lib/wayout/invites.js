@@ -14,6 +14,9 @@ import { WAYOUT_SITE_URL } from './brand'
  */
 const KEY = 'wayout:invite'
 const OPENED = 'wayout:invite-opened'
+// ⭐ The inviter's first name, when they let it be shown (migration 103), so
+// the friend sees "Danny invited you" and knows they are in the right place.
+const FROM = 'wayout:invited-by'
 
 export const inviteUrl = code => `${WAYOUT_SITE_URL}/?i=${encodeURIComponent(code)}&utm_source=invite`
 
@@ -27,7 +30,13 @@ export function captureInvite() {
     const opened = JSON.parse(localStorage.getItem(OPENED) || '[]')
     if (opened.includes(code)) return
     localStorage.setItem(OPENED, JSON.stringify([...opened, code].slice(-20)))
-    supabase.rpc('wayout_invite_open', { p_code: code }).then(() => {}, () => {})
+    supabase.rpc('wayout_invite_open', { p_code: code }).then(({ data }) => {
+      try {
+        if (data) localStorage.setItem(FROM, JSON.stringify({ code, name: String(data).slice(0, 30) }))
+        else localStorage.removeItem(FROM)
+        window.dispatchEvent(new Event('wayout:invited'))
+      } catch { /* nothing breaks */ }
+    }, () => {})
   } catch { /* private mode: nothing recorded, nothing breaks */ }
 }
 
@@ -39,6 +48,42 @@ export async function claimInvite() {
     await supabase.rpc('wayout_invite_claim', { p_code: saved.code })
     localStorage.removeItem(KEY)
   } catch { /* the plan matters more than the credit */ }
+}
+
+/**
+ * Who invited this browser, for the welcome note: { name } or { name: null }
+ * when a link was opened but the inviter keeps their name private; null when
+ * no invite link was ever opened here.
+ */
+export function invitedBy() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || 'null')
+    if (!saved?.code) return null
+    const from = JSON.parse(localStorage.getItem(FROM) || 'null')
+    return { name: from?.code === saved.code ? from.name : null }
+  } catch { return null }
+}
+
+/** The caller's main link: { code, short, show_name } (migration 103). */
+export async function myInvite() {
+  const { data, error } = await supabase.rpc('wayout_invite_mine')
+  if (error) return null
+  return data ?? null
+}
+
+export async function setShowName(show) {
+  const { error } = await supabase.rpc('wayout_invite_show_name', { p_show: Boolean(show) })
+  if (error) throw new Error('That did not save. Try again in a moment.')
+}
+
+/**
+ * A friend typing a code after signing up another way.
+ * Returns 'ok' · 'own' · 'unknown' · 'already' · 'too_late'.
+ */
+export async function claimCode(code) {
+  const { data, error } = await supabase.rpc('wayout_invite_claim_code', { p_code: String(code ?? '').trim() })
+  if (error) throw new Error('That did not go through. Try again in a moment.')
+  return data
 }
 
 /** { from, show, answered } for someone who joined from a link, else null. */

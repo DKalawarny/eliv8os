@@ -6,7 +6,7 @@ import { Helmet } from 'react-helmet-async'
 import { WAYOUT_NAME, WAYOUT_NAME_TITLE, WAYOUT_TAGLINE, WAYOUT_BASE, WAYOUT_SITE_URL, canonicalUrl } from '../../lib/wayout/brand'
 import { priceLine, WAYOUT_PRICE_FULL, WAYOUT_PAYMENTS_LIVE, walksWithYouLine } from '../../lib/wayout/pricing'
 import { SITUATIONS } from '../../content/unstuckSituations'
-import { WayoutFooter } from './WayoutShell'
+import { WayoutFooter, InvitedNote } from './WayoutShell'
 import './wayout.css'
 
 /**
@@ -194,6 +194,8 @@ export default function Landing() {
             {/* ⚠️ `?in=1` — a link that says "Sign in" has to arrive on sign-in. */}
             <Link className="wayout__signin" to={`${WAYOUT_BASE}/enter?in=1`}>Already started? Sign in</Link>
           </div>
+          {/* ⭐ "Danny invited you", for a visitor from an invite link. */}
+          <InvitedNote />
 
           <h1 className="wayout__heroline">
             Three<br />moves.<br /><span>In order.</span>

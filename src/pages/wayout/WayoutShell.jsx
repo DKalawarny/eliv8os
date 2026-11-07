@@ -6,7 +6,8 @@ import { clearDraft } from '../../lib/wayout/draft'
 import { OPERATOR_CONTACT } from '../../lib/terms'
 import { WAYOUT_NAME, WAYOUT_NAME_TITLE, WAYOUT_TAGLINE, WAYOUT_SITE_URL, WAYOUT_BASE, WAYOUT_HOME, canonicalUrl } from '../../lib/wayout/brand'
 import { captureSource } from '../../lib/wayout/source'
-import { captureInvite } from '../../lib/wayout/invites'
+import { captureInvite, invitedBy } from '../../lib/wayout/invites'
+import { WAYOUT_REFERRAL_LIVE } from '../../lib/wayout/pricing'
 import './wayout.css'
 
 /**
@@ -167,7 +168,10 @@ export default function WayoutShell({
         </div>
         {/* ⚠️ A main landmark for screen readers (Lighthouse, 3 Oct). display:
             contents keeps the frame's flex layout exactly as it was. */}
-        <main className="wayout__main">{children}</main>
+        <main className="wayout__main">
+          {!signedIn && <InvitedNote />}
+          {children}
+        </main>
         {/* ⭐⭐ ON EVERY PAGE, SAID ONCE AND PLAINLY. Daniel, 1 Oct: "making sure
             that it is clear this isn't legal or financial advice, this is the
             user's choice." Not a wall of small print — one true sentence and
@@ -284,5 +288,34 @@ function AccountMenu() {
         </nav>
       )}
     </div>
+  )
+}
+
+/**
+ * ⭐ "DANNY INVITED YOU" (Daniel, 7 Nov 2026: the link "would need some
+ * explaining on the other end so the person knows to use that specific one").
+ * For a signed-out visitor who arrived from an invite link: who sent them, if
+ * the sender lets their name show, and that signing up from here counts.
+ * ⚠️ Money is named only once WAYOUT_REFERRAL_LIVE is on (pricing.js).
+ */
+export function InvitedNote() {
+  const [from, setFrom] = useState(() => invitedBy())
+  useEffect(() => {
+    const again = () => setFrom(invitedBy())
+    window.addEventListener('wayout:invited', again)
+    return () => window.removeEventListener('wayout:invited', again)
+  }, [])
+  if (!from) return null
+  const who = from.name || 'Someone you know'
+  return (
+    <aside className="wayout__i2welcome">
+      <span className="wayout__i2av" aria-hidden="true">{(from.name || '?').slice(0, 1).toUpperCase()}</span>
+      <span>
+        <b>{WAYOUT_REFERRAL_LIVE ? `${who} gave you half off` : `${who} invited you`}</b>
+        <span>{WAYOUT_REFERRAL_LIVE
+          ? `Your plan is free. Your first month of step by step help is half price, applied when you sign up from here. Your answers stay private to you.`
+          : `Make your free plan from here${from.name ? `, and ${from.name} will see that you joined` : ''}. Your answers and your plan stay private to you.`}</span>
+      </span>
+    </aside>
   )
 }

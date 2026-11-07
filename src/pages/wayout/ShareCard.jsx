@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { shareDraft, movesBlock, SHARE_URL } from '../../lib/wayout/shareText'
-import { mainInviteCode, inviteUrl } from '../../lib/wayout/invites'
+import { myInvite, inviteUrl } from '../../lib/wayout/invites'
 
 /**
  * ⭐ "Send this to someone" (17 Oct 2026). A draft from their three move
@@ -13,15 +13,16 @@ export default function ShareCard({ map, movesDone = 0 }) {
   const [edited, setEdited] = useState(false)
   const [url, setUrl] = useState(SHARE_URL)
   const [withMoves, setWithMoves] = useState(false)
+  const [short, setShort] = useState('')
 
   // ⭐ Their own link, so a friend who joins shows up on /invite. Swapped in
   // only if they have not started editing; the plain link works either way.
   useEffect(() => {
     let live = true
-    mainInviteCode().then(code => {
-      if (!live || !code) return
-      setUrl(inviteUrl(code))
-      if (!edited) setText(shareDraft(map, inviteUrl(code)))
+    myInvite().then(m => {
+      if (!live || !m?.code) return
+      setUrl(inviteUrl(m.code)); setShort(m.short ?? '')
+      if (!edited) setText(shareDraft(map, inviteUrl(m.code), { code: m.short }))
     })
     return () => { live = false }
   }, [map]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -43,7 +44,7 @@ export default function ShareCard({ map, movesDone = 0 }) {
   // are added to what is there, not written over it.
   function addMoves() {
     setWithMoves(true)
-    setText(t => (edited ? `${t.trim()}\n\n${movesBlock(map)}` : shareDraft(map, url, { withMoves: true })))
+    setText(t => (edited ? `${t.trim()}\n\n${movesBlock(map)}` : shareDraft(map, url, { withMoves: true, code: short })))
   }
   if (!map?.moves?.length) return null
   return (

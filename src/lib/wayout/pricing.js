@@ -82,7 +82,20 @@ export const WAYOUT_PAYMENTS_LIVE = false
  *     moment they cancel. A refund or chargeback takes it back, so payouts
  *     wait 30 days.
  *   - Nothing to buy to earn. Making people pay in order to earn is a mark of a
- *     pyramid scheme. Referring yourself is allowed: it is just paying twice.
+ *     pyramid scheme.
+ *   - 🔴 7 NOV: NO SHARE ON YOUR OWN PAYMENTS. With an ongoing share, inviting a
+ *     second account of your own would be 20% off forever. A friend who pays
+ *     with the same card (Stripe's card fingerprint) as the inviter earns them
+ *     nothing; the friend's discount still applies.
+ *   - ⭐ 7 NOV, DANIEL: THE FRIEND GETS SOMETHING TOO, so it reads as a gift and
+ *     not a scheme ("it gives me a bit of a pyramid feel"): half off their first
+ *     month (WAYOUT_FRIEND_DISCOUNT). They still pay from day one ("you have to
+ *     get them to pay right away or we won't get them committed").
+ *   - ⭐ 7 NOV: THE SHARE STARTS AT THE FRIEND'S SECOND PAID MONTH, so the worst
+ *     first month (half price, AI at the $5 cap) still clears about $3.90, and
+ *     the thank you is for a friend who stayed.
+ *   - On screen it says "a share", not the number, until a lawyer has read the
+ *     terms (Daniel's call, 7 Nov). Draft terms: InviteTerms.jsx.
  *   - The share is worked out in the currency the friend PAID, and says which.
  *     It is converted once, at payout, with the rate shown.
  *   - Never sold as a way to make money, and never in anything the AI writes.
@@ -91,6 +104,25 @@ export const WAYOUT_PAYMENTS_LIVE = false
  *     final terms before launch.
  */
 export const WAYOUT_REFERRAL_SHARE = 0.2
+/** The invited friend's discount: half off their first paid month. */
+export const WAYOUT_FRIEND_DISCOUNT = 0.5
+/** Said TO the friend ("your"), and ABOUT the friend to the inviter ("their"). */
+export const WAYOUT_FRIEND_DISCOUNT_LABEL = 'half off your first month'
+export const WAYOUT_FRIEND_DISCOUNT_THEIR = 'half off their first month'
+/** The share starts with the friend's second paid month. */
+export const WAYOUT_REFERRAL_FROM_MONTH = 2
+/** A typed code counts only for an account this young (migration 103). */
+export const WAYOUT_CODE_DAYS = 30
+/** Payouts wait this long after a payment, for refunds. */
+export const WAYOUT_PAYOUT_HOLD_DAYS = 30
+/** Smallest payout, in the payout currency. */
+export const WAYOUT_PAYOUT_MIN = 25
+/**
+ * ⚠️ One switch for every line that names money in the invite feature (the
+ * friend's discount, the share). Until payments are live there is nothing to
+ * discount and nothing to share, so the pages talk about inviting only.
+ */
+export const WAYOUT_REFERRAL_LIVE = WAYOUT_PAYMENTS_LIVE
 
 /**
  * ⭐⭐ SAY THE PRICE EARLY, EVERY TIME. THE FEAR IS THE AMBUSH, NOT THE MONEY.

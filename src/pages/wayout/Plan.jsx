@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { hasEliv8Business } from '../../lib/handoffs'
+import { InviteIntro, InviteCodeBox } from './InviteIntro'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import WayoutShell from './WayoutShell'
 import {
@@ -1340,6 +1341,8 @@ export function Map({
           <small>The moves above are built to get you here.</small>
         </div>
       )}
+      {/* ⭐ "Oh, I can do this": the invite, the first time the plan appears. */}
+      {!past && !thread.some(e => e?.crisis) && <InviteIntro />}
       {(answers?.fiveYears?.trim() || answers?.tenYears?.trim()) && (
         <section className="wayout__ladder" aria-label="Your way out">
           <h3 className="wayout__label">Further out</h3>
@@ -1506,6 +1509,7 @@ export function Map({
 
       {/* ⭐ THE TAIL IS LINKS, NOT BOXES (6 Nov 2026, "simple, not daunting").
           Each opens only when tapped. */}
+      {!past && <InviteCodeBox />}
       {!past && (
         <div className="wayout__p2tail">
           {Array.isArray(map.moves) && map.moves.length > 0 && (

@@ -1,71 +1,80 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import WayoutShell from './WayoutShell'
+import { Confirm } from './PlanThread'
 import { WAYOUT_BASE } from '../../lib/wayout/brand'
+import { WAYOUT_REFERRAL_LIVE, WAYOUT_FRIEND_DISCOUNT_LABEL, WAYOUT_FRIEND_DISCOUNT_THEIR, WAYOUT_CODE_DAYS } from '../../lib/wayout/pricing'
+import { shareDraft } from '../../lib/wayout/shareText'
 import {
-  myInvites, mainInviteCode, createInvite, deleteInvite, inviteUrl, inviteTotals, friendStage,
+  myInvites, myInvite, setShowName, createInvite, deleteInvite, inviteUrl, inviteTotals, friendStage,
   myReferral, answerReferral, claimInvite,
 } from '../../lib/wayout/invites'
 
 /**
- * ⭐ The people you invited (17 Oct 2026). Daniel: "a dashboard would be great
- * for everyone who has invited people, it makes it exciting: who's joined,
- * who's earning, who hasn't signed up yet".
+ * ⭐⭐ GIVE A FRIEND A HEAD START (7 Nov 2026; mock-up
+ * https://claude.ai/artifact/PeiGpPZDz9yq9B5LrwNMjU).
  *
+ * Daniel: "we need to make it sell itself when anyone signs up, it's a feature
+ * like oh I can do this", then "it gives me a bit of a pyramid feel", so the
+ * friend's discount leads and the inviter's share is a quiet thank you.
+ *
+ * ⚠️ Every line that names money waits for WAYOUT_REFERRAL_LIVE (pricing.js):
+ * until payments are live there is nothing to discount and nothing to share,
+ * so the page is about inviting and seeing who joined. The share itself is
+ * never given as a number on screen until a lawyer has read the terms
+ * (Daniel's call, 7 Nov).
  * 🔴 A friend's name shows only when that friend said yes (InviteConsent.jsx).
- * Otherwise they are "Someone", which still shows how far they got.
- * ⚠️ No promise of a percentage here yet: the referral terms wait for the
- * company and a lawyer (pricing.js REFERRAL). "A share" until then.
- * ⚠️ Never framed as a way to make money. No dashes in copy.
+ * ⚠️ No "one level", "not a job" or other scheme-talk here: those rules live
+ * in the terms. No dashes in copy.
  */
 export default function Invite() {
   const [invites, setInvites] = useState(null)
+  const [mine, setMine] = useState(null)
   const [error, setError] = useState('')
   const [label, setLabel] = useState('')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
+  const [copied, setCopied] = useState('')
   const [ref, setRef] = useState(null)
+  const [doomed, setDoomed] = useState(null)
+  const [made, setMade] = useState(null)
 
   const load = useCallback(async () => {
     try {
       // A friend can land here before ever opening their plan; credit them now.
       await claimInvite()
-      await mainInviteCode()
+      const m = await myInvite()
       const [list, r] = await Promise.all([myInvites(), myReferral()])
-      setInvites(list); setRef(r)
+      setMine(m); setInvites(list); setRef(r)
     } catch (e) { setError(e.message) }
   }, [])
-  useEffect(() => { load() }, [load])
+  useEffect(() => { const t = setTimeout(load, 0); return () => clearTimeout(t) }, [load])
 
+  async function copy(text, what) {
+    try { await navigator.clipboard.writeText(text); setCopied(what) }
+    catch { setNote(`Copy this: ${text}`) }
+  }
+  async function share(text) {
+    try {
+      if (navigator.share) { await navigator.share({ text }); return }
+      await copy(text, 'message')
+    } catch (e) { if (e?.name !== 'AbortError') setNote('That did not open. Copy the message instead.') }
+  }
   async function make(e) {
     e.preventDefault()
     if (!label.trim()) return
     setBusy(true); setNote('')
     try {
       const code = await createInvite(label.trim())
+      setMade({ code, label: label.trim() })
       setLabel('')
       await load()
-      await send(code, `Link for ${label.trim()} is ready.`)
     } catch (err) { setNote(err.message) }
     finally { setBusy(false) }
   }
-
-  async function send(code, done = '') {
-    const url = inviteUrl(code)
-    try {
-      if (navigator.share) { await navigator.share({ text: 'This helped me sort out what to do next. Yours is free:', url }); return }
-      await navigator.clipboard.writeText(url)
-      setNote(`${done} Link copied. Paste it into a text or a message.`.trim())
-    } catch (e) {
-      if (e?.name !== 'AbortError') setNote(`${done} Copy this link: ${url}`.trim())
-    }
+  async function toggleName(show) {
+    try { await setShowName(show); setMine(m => ({ ...m, show_name: show })) } catch (e) { setNote(e.message) }
   }
-
-  async function remove(code, name) {
-    if (!window.confirm(`Delete the link for ${name}? Anyone who joined from it stops showing here.`)) return
-    try { await deleteInvite(code); await load() } catch (e) { setNote(e.message) }
-  }
-
   async function changeShow(show) {
     try { await answerReferral(show); setRef({ ...ref, show, answered: true }) } catch (e) { setNote(e.message) }
   }
@@ -74,86 +83,151 @@ export default function Invite() {
   if (!invites) return <WayoutShell wide><p className="wayout__lead">One moment.</p></WayoutShell>
 
   const totals = inviteTotals(invites)
-  const main = invites.find(i => i.is_main)
-  const people = invites.filter(i => !i.is_main)
+  const mainUrl = mine?.code ? inviteUrl(mine.code) : ''
+  const message = mainUrl ? shareDraft(null, mainUrl, { code: mine?.short }) : ''
+  const people = invites.flatMap(i => {
+    const joined = (i.friends ?? []).map(f => ({ ...f, from: i.label, stage: friendStage(f) }))
+    if (!i.is_main && !joined.length) return [{ waiting: true, label: i.label, code: i.code, opened: i.opened, at: i.created_at }]
+    return joined.map(f => ({ ...f, code: i.is_main ? null : i.code }))
+  })
 
   return (
-    <WayoutShell title="People you invited" wide>
-      <p className="wayout__crumb"><Link to={`${WAYOUT_BASE}/plan`}>← Back to your plan</Link></p>
-      <h1 className="wayout__bigq">People you invited.</h1>
-      <p className="wayout__lead">Know someone who feels stuck? Send them a link. You will see here who opened it, who joined and who made a plan.</p>
+    <WayoutShell title={WAYOUT_REFERRAL_LIVE ? 'Give a friend a head start' : 'Invite people'} wide>
+      <div className="wayout__inv2">
+        <p className="wayout__crumb"><Link to={`${WAYOUT_BASE}/plan`}>← Back to your plan</Link></p>
 
-      <div className="wayout__invstats">
-        {[['Opened your links', totals.opened], ['Joined', totals.joined], ['Made a plan', totals.plans], ['Paying', totals.paying]].map(([k, v]) => (
-          <div key={k} className="wayout__invstat"><b>{v}</b><span>{k}</span></div>
-        ))}
+        <header className="wayout__i2hero">
+          <span className="wayout__i2kick">{WAYOUT_REFERRAL_LIVE ? 'Give a friend a head start' : 'Invite people'}</span>
+          <h1>
+            {WAYOUT_REFERRAL_LIVE
+              ? <>Give someone who feels stuck <span className="wayout__i2hl">half off</span></>
+              : <>Know someone who feels <span className="wayout__i2hl">stuck</span>?</>}
+          </h1>
+          <p>
+            {WAYOUT_REFERRAL_LIVE
+              ? `Their plan is free. Your link or code gives them ${WAYOUT_FRIEND_DISCOUNT_THEIR} of the step by step help. When they stay, you get a thank you share.`
+              : 'Send them your link. Their plan is free, and you will see here when they join.'}
+          </p>
+        </header>
+
+        <ol className="wayout__i2steps">
+          <li className="is-1"><i>1</i><b>Send your link or code</b><span>Text it, post it, or tell them your code out loud.</span></li>
+          {WAYOUT_REFERRAL_LIVE ? (
+            <>
+              <li className="is-2"><i>2</i><b>They get half off</b><span>Their plan is free, and their first month of step by step help is half price.</span></li>
+              <li className="is-3"><i>3</i><b>You get a thank you</b><span>A share of what they pay, from their second month, for as long as they stay.</span></li>
+            </>
+          ) : (
+            <>
+              <li className="is-2"><i>2</i><b>They make their free plan</b><span>Their answers and their plan stay private to them.</span></li>
+              <li className="is-3"><i>3</i><b>You see they joined</b><span>And, if they say yes, their first name.</span></li>
+            </>
+          )}
+        </ol>
+
+        {mine?.code && (
+          <section className="wayout__i2card is-sky">
+            <h2>Your link and code</h2>
+            <p>{WAYOUT_REFERRAL_LIVE
+              ? 'Anyone who joins with either one gets their discount, and you see that they joined.'
+              : 'One link for anyone. Post it, text it, put it in a group chat. Everyone who joins through it shows here.'}</p>
+            <div className="wayout__i2link">
+              <code>{mainUrl.replace(/^https?:\/\//, '').replace(/&utm_source=invite$/, '')}</code>
+              <button type="button" onClick={() => copy(mainUrl, 'link')}>{copied === 'link' ? 'Copied' : 'Copy'}</button>
+            </div>
+            {mine.short && (
+              <p className="wayout__i2code">
+                Your code: <b>{mine.short}</b>{' '}
+                {WAYOUT_REFERRAL_LIVE ? 'They type it when they sign up to get their discount.' : `If they forgot the link, they can type it in their first ${WAYOUT_CODE_DAYS} days.`}
+              </p>
+            )}
+            <details className="wayout__i2msg">
+              <summary>What to send with it</summary>
+              <blockquote>{message}</blockquote>
+              <div className="wayout__i2row">
+                <button type="button" className="wayout__i2btn" onClick={() => share(message)}>Send the message</button>
+                <button type="button" className="wayout__i2quiet" onClick={() => copy(message, 'message')}>{copied === 'message' ? 'Copied' : 'Copy it'}</button>
+              </div>
+            </details>
+            <label className="wayout__i2toggle">
+              <input id="wayout-show-name" type="checkbox" checked={mine.show_name !== false} onChange={e => toggleName(e.target.checked)} />
+              Show my first name to people who open my link
+            </label>
+            <p className="wayout__i2fine">Opened {totals.opened} {totals.opened === 1 ? 'time' : 'times'} so far.</p>
+          </section>
+        )}
+
+        <section className="wayout__i2card is-amber">
+          <h2>Want to see who joined? Make a link for one person</h2>
+          <p>The name is only for you. They never see it.</p>
+          <form className="wayout__i2row" onSubmit={make}>
+            <input id="wayout-invite-label" className="wayout__input" value={label} maxLength={40} placeholder="For example: Mike from church" aria-label="Who is this link for?" onChange={e => setLabel(e.target.value)} />
+            <button type="submit" className="wayout__i2btn" disabled={busy || !label.trim()}>Make their link</button>
+          </form>
+          {made && (
+            <div className="wayout__i2link">
+              <code>{inviteUrl(made.code).replace(/^https?:\/\//, '').replace(/&utm_source=invite$/, '')}</code>
+              <button type="button" onClick={() => share(shareDraft(null, inviteUrl(made.code), { code: mine?.short }))}>Send it to {made.label}</button>
+            </div>
+          )}
+          {note && <p role="status" className="wayout__i2fine">{note}</p>}
+        </section>
+
+        {people.length > 0 && (
+          <section className="wayout__i2people">
+            <h2>People you invited</h2>
+            <ul>
+              {people.map((p, n) => {
+                const stage = p.waiting ? (p.opened ? 'Opened' : 'Sent') : p.stage
+                const lit = p.waiting ? (p.opened ? 1 : 0) : stage === 'Joined' ? 2 : 3
+                return (
+                  <li key={`${p.code ?? 'main'}-${n}`}>
+                    <div>
+                      <b>{p.waiting ? p.label : (p.name || (p.from ? p.from : 'Someone'))}</b>
+                      <small>
+                        {p.waiting
+                          ? (p.opened ? 'Opened your link, not joined yet' : 'Has not opened the link yet')
+                          : p.name ? `Shared their name with you${p.from ? ` · your link “${p.from}”` : ''}` : (p.from ? 'Joined from their link' : 'Joined from your link, kept their name private')}
+                      </small>
+                    </div>
+                    <span className="wayout__i2trail" aria-hidden="true"><i className={lit > 0 ? 'on' : ''} /><i className={lit > 1 ? 'on' : ''} /><i className={lit > 2 ? 'on' : ''} /></span>
+                    <span className={`wayout__i2pill is-${stage.toLowerCase().replace(/\s+/g, '-')}`}>{stage}</span>
+                    {p.waiting && <button type="button" className="wayout__i2quiet" onClick={() => setDoomed(p)}>Delete</button>}
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        )}
+
+        <div className="wayout__i2thanks">
+          <div>
+            <b>Your thank you</b>
+            <span>{WAYOUT_REFERRAL_LIVE
+              ? '$0 so far. Paid once someone you invited has paid their second month, for as long as they stay.'
+              : 'Nothing to pay or earn yet. When paid plans open, you will get a share of what the people you invited pay. The details will be here first.'}</span>
+          </div>
+        </div>
+
+        {ref && (
+          <section className="wayout__i2card">
+            <h2>{ref.from ? `${ref.from} sent you here` : 'Someone sent you here'}</h2>
+            <p>{ref.show ? `${ref.from || 'They'} can see your first name and whether you have made a plan.` : 'They cannot see that you joined.'}</p>
+            <button type="button" className="wayout__i2quiet" onClick={() => changeShow(!ref.show)}>
+              {ref.show ? 'Keep it private instead' : 'Let them see'}
+            </button>
+          </section>
+        )}
       </div>
 
-      <section className="wayout__invcard">
-        <span className="wayout__label">What you have earned</span>
-        <p className="wayout__invearn"><b>$0</b></p>
-        <p className="wayout__invfine">Nobody pays for anything yet. When the step by step help opens for payment, you will get a share of what each person you invited pays, for as long as they keep paying. The details will be here first.</p>
-      </section>
-
-      {main && (
-        <section className="wayout__invcard">
-          <span className="wayout__label">Your link</span>
-          <p className="wayout__invlink">{inviteUrl(main.code)}</p>
-          <p className="wayout__invfine">Post it anywhere, or send it to anyone. Opened {main.opened} {main.opened === 1 ? 'time' : 'times'}.</p>
-          <button type="button" className="wayout__again" onClick={() => send(main.code)}>Send your link</button>
-          <Friends list={main.friends} />
-        </section>
-      )}
-
-      <section className="wayout__invcard">
-        <span className="wayout__label">A link for one person</span>
-        <p className="wayout__invfine">Give each person their own link and you will see who has joined and who has not yet. The name is only for you. They never see it.</p>
-        <form className="wayout__invform" onSubmit={make}>
-          <input className="wayout__input" value={label} maxLength={40} placeholder="Mom, Jay from work" aria-label="Who is this link for?" onChange={e => setLabel(e.target.value)} />
-          <button type="submit" className="wayout__again" disabled={busy || !label.trim()}>Make their link</button>
-        </form>
-        {note && <p role="status">{note}</p>}
-      </section>
-
-      {people.map(i => (
-        <section key={i.code} className="wayout__invcard">
-          <span className="wayout__label">{i.label}</span>
-          <p className="wayout__invfine">
-            {i.friends.length ? null : (i.opened ? 'Opened your link, has not joined yet.' : 'Has not opened the link yet.')}
-          </p>
-          <Friends list={i.friends} />
-          <div className="wayout__invitebtns">
-            <button type="button" className="wayout__again" onClick={() => send(i.code)}>Send again</button>
-            <button type="button" className="wayout__again" onClick={() => remove(i.code, i.label)}>Delete</button>
-          </div>
-        </section>
-      ))}
-
-      {ref && (
-        <section className="wayout__invcard">
-          <span className="wayout__label">{ref.from ? `${ref.from} sent you here` : 'Someone sent you here'}</span>
-          <p className="wayout__invfine">
-            {ref.show ? `${ref.from || 'They'} can see your first name and whether you have made a plan.` : 'They cannot see that you joined.'}
-          </p>
-          <button type="button" className="wayout__again" onClick={() => changeShow(!ref.show)}>
-            {ref.show ? 'Keep it private instead' : 'Let them see'}
-          </button>
-        </section>
-      )}
+      <Confirm
+        open={Boolean(doomed)}
+        title={doomed ? `Delete the link for ${doomed.label}?` : ''}
+        body="Anyone who joins from it later will not show here."
+        yes="Delete it"
+        onYes={async () => { const d = doomed; setDoomed(null); try { await deleteInvite(d.code); await load() } catch (e) { setNote(e.message) } }}
+        onNo={() => setDoomed(null)}
+      />
     </WayoutShell>
-  )
-}
-
-function Friends({ list = [] }) {
-  if (!list.length) return null
-  return (
-    <ul className="wayout__invfriends">
-      {list.map((f, n) => (
-        <li key={n}>
-          <span>{f.name || (f.shared ? 'A friend' : 'Someone')}{f.name ? '' : <em>{f.shared ? ' (no name yet)' : ' (kept private)'}</em>}</span>
-          <b>{friendStage(f)}</b>
-        </li>
-      ))}
-    </ul>
   )
 }
