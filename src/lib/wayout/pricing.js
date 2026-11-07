@@ -59,6 +59,23 @@ export const WAYOUT_PRICE_CENTS = 1900
 export const WAYOUT_CURRENCY    = 'CAD'
 export const WAYOUT_PRICE_PERIOD = 'month'
 
+/**
+ * ⭐ ONE PRICE PER COUNTRY (Daniel, 7 Nov 2026: "ok us 19"). Canadians pay
+ * C$19, everyone else US$19, each in their own currency, so nobody is charged
+ * in a currency they did not see. Stripe holds both prices on one product.
+ * ⚠️ The invite share is worked out in the currency the friend paid (REFERRAL).
+ */
+export const WAYOUT_PRICES = {
+  CAD: { cents: 1900, label: 'C$19', full: 'C$19 a month' },
+  USD: { cents: 1900, label: 'US$19', full: 'US$19 a month' },
+}
+/** The price for someone, from the country they gave (answers.region). */
+export function priceFor(region) {
+  return String(region ?? '').toLowerCase() === 'ca'
+    ? { currency: 'CAD', ...WAYOUT_PRICES.CAD }
+    : { currency: 'USD', ...WAYOUT_PRICES.USD }
+}
+
 /** The human-readable figure. The only string anyone should print. */
 export const WAYOUT_PRICE_LABEL = '$19'
 
