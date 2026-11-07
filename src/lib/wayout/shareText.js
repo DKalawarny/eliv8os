@@ -1,5 +1,5 @@
 import { WAYOUT_NAME, WAYOUT_SITE_URL, WAYOUT_TOTAL_TIME } from './brand'
-import { WAYOUT_REFERRAL_LIVE, WAYOUT_FRIEND_DISCOUNT_LABEL, WAYOUT_REFERRAL_SHARE_LABEL } from './pricing'
+import { WAYOUT_REFERRAL_LIVE, WAYOUT_REFERRAL_ANNOUNCED, WAYOUT_FRIEND_DISCOUNT_LABEL, WAYOUT_REFERRAL_SHARE_LABEL } from './pricing'
 import { forReaders } from './mapContract'
 
 /**
@@ -44,7 +44,7 @@ export function movesBlock(map) {
  * the friend, so they are out unless the person adds them (`withMoves`).
  * `url` is their own invite link when they have one (invites.js), so the friend counts.
  */
-export function shareDraft(map, url = SHARE_URL, { withMoves = false, code = '', live = WAYOUT_REFERRAL_LIVE } = {}) {
+export function shareDraft(map, url = SHARE_URL, { withMoves = false, code = '', live = WAYOUT_REFERRAL_LIVE, announced = WAYOUT_REFERRAL_ANNOUNCED } = {}) {
   const lines = [`I have been using ${WAYOUT_NAME} to work out what to do first. Getting your plan is free, and the questions take ${WAYOUT_TOTAL_TIME}.`]
   const moves = withMoves ? movesBlock(map) : ''
   if (moves) lines.push('', moves)
@@ -52,7 +52,10 @@ export function shareDraft(map, url = SHARE_URL, { withMoves = false, code = '',
   // that specific one, not just sign in normally"), and, once there is money
   // in it, says the sender gets something: the honest way to recommend.
   if (live) lines.push('', `My link gives you ${WAYOUT_FRIEND_DISCOUNT_LABEL} of the step by step help${code ? `, or enter my code ${code}` : ''}. (If you stay, I get ${WAYOUT_REFERRAL_SHARE_LABEL} of what you pay.)`)
-  else if (url !== SHARE_URL) lines.push('', `Sign up through my link so I can see you joined${code ? `, or enter my code ${code}` : ''}.`)
+  else if (url !== SHARE_URL) {
+    lines.push('', `Sign up through my link so I can see you joined${code ? `, or enter my code ${code}` : ''}.`)
+    if (announced) lines.push(`When paid plans open, it gets you ${WAYOUT_FRIEND_DISCOUNT_LABEL}, and I get ${WAYOUT_REFERRAL_SHARE_LABEL} of what you pay if you stay.`)
+  }
   lines.push('', `Yours: ${url}`)
   return lines.join('\n')
 }

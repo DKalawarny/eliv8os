@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import WayoutShell from './WayoutShell'
 import { Confirm } from './PlanThread'
 import { WAYOUT_BASE } from '../../lib/wayout/brand'
-import { WAYOUT_REFERRAL_LIVE, WAYOUT_FRIEND_DISCOUNT_LABEL, WAYOUT_FRIEND_DISCOUNT_THEIR, WAYOUT_CODE_DAYS, WAYOUT_REFERRAL_SHARE_LABEL } from '../../lib/wayout/pricing'
+import { WAYOUT_REFERRAL_LIVE, WAYOUT_FRIEND_DISCOUNT_LABEL, WAYOUT_FRIEND_DISCOUNT_THEIR, WAYOUT_CODE_DAYS, WAYOUT_REFERRAL_SHARE_LABEL, WAYOUT_REFERRAL_ANNOUNCED, referralLine } from '../../lib/wayout/pricing'
 import { shareDraft } from '../../lib/wayout/shareText'
 import {
   myInvites, myInvite, setShowName, createInvite, deleteInvite, inviteUrl, inviteTotals, friendStage,
@@ -100,18 +100,22 @@ export default function Invite() {
           <h1>
             {WAYOUT_REFERRAL_LIVE
               ? <>Give someone who feels stuck <span className="wayout__i2hl">half off</span></>
-              : <>Know someone who feels <span className="wayout__i2hl">stuck</span>?</>}
+              : WAYOUT_REFERRAL_ANNOUNCED
+                ? <>Invite a friend. They get half off, <span className="wayout__i2hl">you get {WAYOUT_REFERRAL_SHARE_LABEL}</span></>
+                : <>Know someone who feels <span className="wayout__i2hl">stuck</span>?</>}
           </h1>
           <p>
             {WAYOUT_REFERRAL_LIVE
               ? `Their plan is free. Your link or code gives them ${WAYOUT_FRIEND_DISCOUNT_THEIR} of the step by step help. When they stay, you get ${WAYOUT_REFERRAL_SHARE_LABEL} of what they pay.`
-              : 'Send them your link. Their plan is free, and you will see here when they join.'}
+              : WAYOUT_REFERRAL_ANNOUNCED
+                ? `Send them your link. Their plan is free. ${referralLine(false)}`
+                : 'Send them your link. Their plan is free, and you will see here when they join.'}
           </p>
         </header>
 
         <ol className="wayout__i2steps">
           <li className="is-1"><i>1</i><b>Send your link or code</b><span>Text it, post it, or tell them your code out loud.</span></li>
-          {WAYOUT_REFERRAL_LIVE ? (
+          {WAYOUT_REFERRAL_LIVE || WAYOUT_REFERRAL_ANNOUNCED ? (
             <>
               <li className="is-2"><i>2</i><b>They get half off</b><span>Their plan is free, and their first month of step by step help is half price.</span></li>
               <li className="is-3"><i>3</i><b>You get {WAYOUT_REFERRAL_SHARE_LABEL}</b><span>Of what they pay, from their second month, for as long as they stay.</span></li>
@@ -123,6 +127,9 @@ export default function Invite() {
             </>
           )}
         </ol>
+        {!WAYOUT_REFERRAL_LIVE && WAYOUT_REFERRAL_ANNOUNCED && (
+          <p className="wayout__i2soon">The discount and your {WAYOUT_REFERRAL_SHARE_LABEL} start when paid plans open. Friends who join before then still count.</p>
+        )}
 
         {mine?.code && (
           <section className="wayout__i2card is-sky">

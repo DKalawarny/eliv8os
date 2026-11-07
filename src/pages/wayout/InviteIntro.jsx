@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { WAYOUT_BASE } from '../../lib/wayout/brand'
-import { WAYOUT_REFERRAL_LIVE, WAYOUT_FRIEND_DISCOUNT_LABEL, WAYOUT_FRIEND_DISCOUNT_THEIR, WAYOUT_CODE_DAYS, WAYOUT_REFERRAL_SHARE_LABEL } from '../../lib/wayout/pricing'
+import { WAYOUT_REFERRAL_LIVE, WAYOUT_FRIEND_DISCOUNT_LABEL, WAYOUT_FRIEND_DISCOUNT_THEIR, WAYOUT_CODE_DAYS, WAYOUT_REFERRAL_SHARE_LABEL, WAYOUT_REFERRAL_ANNOUNCED } from '../../lib/wayout/pricing'
 import { claimCode, myReferral } from '../../lib/wayout/invites'
 
 /**
@@ -26,10 +26,12 @@ export function InviteIntro() {
         <svg viewBox="0 0 24 24" fill="none" stroke="#1F2A1C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2" /><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5" /><path d="M17 8v6M14 11h6" /></svg>
       </span>
       <div>
-        <h3>{WAYOUT_REFERRAL_LIVE ? 'Give a friend half off' : 'You can invite people too'}</h3>
+        <h3>{WAYOUT_REFERRAL_LIVE ? 'Give a friend half off' : WAYOUT_REFERRAL_ANNOUNCED ? `Invite a friend: they get half off, you get ${WAYOUT_REFERRAL_SHARE_LABEL}` : 'You can invite people too'}</h3>
         <p>{WAYOUT_REFERRAL_LIVE
           ? `Know someone who feels stuck? Your link gives them ${WAYOUT_FRIEND_DISCOUNT_THEIR} of the step by step help. When they stay, you get ${WAYOUT_REFERRAL_SHARE_LABEL} of what they pay.`
-          : 'Know someone who feels stuck? Send them your own link. Their plan is free, and you will see when they join.'}</p>
+          : WAYOUT_REFERRAL_ANNOUNCED
+            ? `Know someone who feels stuck? Send them your own link. Their plan is free. When paid plans open, they get half off their first month, and you get ${WAYOUT_REFERRAL_SHARE_LABEL} of what they pay, every month they stay.`
+            : 'Know someone who feels stuck? Send them your own link. Their plan is free, and you will see when they join.'}</p>
       </div>
       <Link className="wayout__i2go" to={`${WAYOUT_BASE}/invite`} onClick={putAway}>See how it works</Link>
     </aside>
@@ -83,7 +85,7 @@ export function InviteCodeBox() {
       <b>{WAYOUT_REFERRAL_LIVE ? 'Have a friend’s code?' : 'Were you invited?'}</b>
       <p>{WAYOUT_REFERRAL_LIVE
         ? `Enter it for ${WAYOUT_FRIEND_DISCOUNT_LABEL} of the step by step help.`
-        : 'If someone sent you here and you signed up another way, enter their code so they know you joined.'}</p>
+        : `If someone sent you here and you signed up another way, enter their code so they know you joined.${WAYOUT_REFERRAL_ANNOUNCED ? ' When paid plans open, it also gets you half off your first month.' : ''}`}</p>
       {!done && (
         <form className="wayout__i2row" onSubmit={add}>
           <input id="wayout-invite-code" className="wayout__input" value={code} maxLength={20} placeholder="DANNY-4F2" aria-label="Their code" onChange={e => setCode(e.target.value)} />

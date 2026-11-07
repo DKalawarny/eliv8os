@@ -7,7 +7,7 @@ import { OPERATOR_CONTACT } from '../../lib/terms'
 import { WAYOUT_NAME, WAYOUT_NAME_TITLE, WAYOUT_TAGLINE, WAYOUT_SITE_URL, WAYOUT_BASE, WAYOUT_HOME, canonicalUrl } from '../../lib/wayout/brand'
 import { captureSource } from '../../lib/wayout/source'
 import { captureInvite, invitedBy } from '../../lib/wayout/invites'
-import { WAYOUT_REFERRAL_LIVE } from '../../lib/wayout/pricing'
+import { WAYOUT_REFERRAL_LIVE, WAYOUT_REFERRAL_ANNOUNCED } from '../../lib/wayout/pricing'
 import './wayout.css'
 
 /**
@@ -314,7 +314,7 @@ export function InvitedNote() {
         <b>{WAYOUT_REFERRAL_LIVE ? `${who} gave you half off` : `${who} invited you`}</b>
         <span>{WAYOUT_REFERRAL_LIVE
           ? `Your plan is free. Your first month of step by step help is half price, applied when you sign up from here. Your answers stay private to you.`
-          : `Make your free plan from here${from.name ? `, and ${from.name} will see that you joined` : ''}. Your answers and your plan stay private to you.`}</span>
+          : `Make your free plan from here${from.name ? `, and ${from.name} will see that you joined` : ''}.${WAYOUT_REFERRAL_ANNOUNCED ? ' When paid plans open, you get half off your first month.' : ''} Your answers and your plan stay private to you.`}</span>
       </span>
     </aside>
   )

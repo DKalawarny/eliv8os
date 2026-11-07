@@ -44,7 +44,7 @@ describe('a shared plan carries no money figures', () => {
 
 describe('the invite message, by whether money is in it yet', () => {
   it('before payments: tells them to use the link or code, names no money', () => {
-    const t = shareDraft(null, 'https://getunstuckmap.com/?i=abc', { code: 'DANNY-4F2', live: false })
+    const t = shareDraft(null, 'https://getunstuckmap.com/?i=abc', { code: 'DANNY-4F2', live: false, announced: false })
     expect(t).toContain('Sign up through my link so I can see you joined, or enter my code DANNY-4F2.')
     expect(t).not.toMatch(/half|share|thank you|\$|%/i)
   })
@@ -53,5 +53,12 @@ describe('the invite message, by whether money is in it yet', () => {
     expect(t).toContain('My link gives you half off your first month')
     // ⭐ Says plainly what the sender gets: the clearest disclosure there is.
     expect(t).toContain('(If you stay, I get 20% of what you pay.)')
+  })
+})
+
+describe('announced before payments (7 Nov: "there is no incentive showing")', () => {
+  it('says what will happen, in the future tense, with the disclosure', () => {
+    const t = shareDraft(null, 'https://getunstuckmap.com/?i=abc', { code: 'DANNY-4F2', live: false, announced: true })
+    expect(t).toContain('When paid plans open, it gets you half off your first month, and I get 20% of what you pay if you stay.')
   })
 })

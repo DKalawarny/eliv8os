@@ -143,6 +143,17 @@ export const WAYOUT_PAYOUT_MIN = 25
  * discount and nothing to share, so the pages talk about inviting only.
  */
 export const WAYOUT_REFERRAL_LIVE = WAYOUT_PAYMENTS_LIVE
+/**
+ * ⭐ ANNOUNCED BEFORE IT IS LIVE (Daniel, 7 Nov 2026: "there is no incentive
+ * showing they can earn though"). While payments are off, the pages say what
+ * WILL happen, in the future tense: "when paid plans open, you get 20%".
+ * Once WAYOUT_REFERRAL_LIVE is on, the same lines switch to the present.
+ */
+export const WAYOUT_REFERRAL_ANNOUNCED = true
+/** The rule in one sentence, about the friend, for the inviter. */
+export const referralLine = (live = WAYOUT_REFERRAL_LIVE) => live
+  ? `They get ${'half off their first month'}, and you get ${Math.round(WAYOUT_REFERRAL_SHARE * 100)}% of what they pay from their second month, for as long as they stay.`
+  : `When paid plans open, they get half off their first month, and you get ${Math.round(WAYOUT_REFERRAL_SHARE * 100)}% of what they pay from their second month, for as long as they stay.`
 
 /**
  * ⭐⭐ SAY THE PRICE EARLY, EVERY TIME. THE FEAR IS THE AMBUSH, NOT THE MONEY.

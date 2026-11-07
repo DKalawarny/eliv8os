@@ -4122,3 +4122,4 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
 @keyframes wayout-i2pop { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
 @media (max-width: 760px) { .wayout__i2find { grid-template-columns: auto 1fr; } .wayout__i2find .wayout__i2go { grid-column: 1 / -1; text-align: center; } }
 @media (prefers-reduced-motion: reduce) { .wayout__i2find, .wayout__i2welcome { animation: none; } }
+.wayout__i2soon { margin: 12px 0 0; text-align: center; font-size: 14px; font-weight: 800; color: var(--p-amber-d); }
