@@ -94,8 +94,9 @@ export const WAYOUT_PAYMENTS_LIVE = false
  *   - ⭐ 7 NOV: THE SHARE STARTS AT THE FRIEND'S SECOND PAID MONTH, so the worst
  *     first month (half price, AI at the $5 cap) still clears about $3.90, and
  *     the thank you is for a friend who stayed.
- *   - On screen it says "a share", not the number, until a lawyer has read the
- *     terms (Daniel's call, 7 Nov). Draft terms: InviteTerms.jsx.
+ *   - On screen the number is shown: "20% of what they pay" (Daniel, 7 Nov: "ya
+ *     show the 20%", reversing "a share" the same day). Only once
+ *     WAYOUT_REFERRAL_LIVE is on. Draft terms: docs/legal/invite-terms-draft.html.
  *   - The share is worked out in the currency the friend PAID, and says which.
  *     It is converted once, at payout, with the rate shown.
  *   - Never sold as a way to make money, and never in anything the AI writes.
@@ -104,6 +105,8 @@ export const WAYOUT_PAYMENTS_LIVE = false
  *     final terms before launch.
  */
 export const WAYOUT_REFERRAL_SHARE = 0.2
+/** The share as people read it. Derived, so the number lives in one place. */
+export const WAYOUT_REFERRAL_SHARE_LABEL = `${Math.round(WAYOUT_REFERRAL_SHARE * 100)}%`
 /** The invited friend's discount: half off their first paid month. */
 export const WAYOUT_FRIEND_DISCOUNT = 0.5
 /** Said TO the friend ("your"), and ABOUT the friend to the inviter ("their"). */

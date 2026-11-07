@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { WAYOUT_BASE } from '../../lib/wayout/brand'
-import { WAYOUT_REFERRAL_LIVE, WAYOUT_FRIEND_DISCOUNT_LABEL, WAYOUT_FRIEND_DISCOUNT_THEIR, WAYOUT_CODE_DAYS } from '../../lib/wayout/pricing'
+import { WAYOUT_REFERRAL_LIVE, WAYOUT_FRIEND_DISCOUNT_LABEL, WAYOUT_FRIEND_DISCOUNT_THEIR, WAYOUT_CODE_DAYS, WAYOUT_REFERRAL_SHARE_LABEL } from '../../lib/wayout/pricing'
 import { claimCode, myReferral } from '../../lib/wayout/invites'
 
 /**
@@ -28,7 +28,7 @@ export function InviteIntro() {
       <div>
         <h3>{WAYOUT_REFERRAL_LIVE ? 'Give a friend half off' : 'You can invite people too'}</h3>
         <p>{WAYOUT_REFERRAL_LIVE
-          ? `Know someone who feels stuck? Your link gives them ${WAYOUT_FRIEND_DISCOUNT_THEIR} of the step by step help. When they stay, you get a thank you too.`
+          ? `Know someone who feels stuck? Your link gives them ${WAYOUT_FRIEND_DISCOUNT_THEIR} of the step by step help. When they stay, you get ${WAYOUT_REFERRAL_SHARE_LABEL} of what they pay.`
           : 'Know someone who feels stuck? Send them your own link. Their plan is free, and you will see when they join.'}</p>
       </div>
       <Link className="wayout__i2go" to={`${WAYOUT_BASE}/invite`} onClick={putAway}>See how it works</Link>

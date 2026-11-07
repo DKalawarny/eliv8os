@@ -1,5 +1,5 @@
 import { WAYOUT_NAME, WAYOUT_SITE_URL, WAYOUT_TOTAL_TIME } from './brand'
-import { WAYOUT_REFERRAL_LIVE, WAYOUT_FRIEND_DISCOUNT_LABEL } from './pricing'
+import { WAYOUT_REFERRAL_LIVE, WAYOUT_FRIEND_DISCOUNT_LABEL, WAYOUT_REFERRAL_SHARE_LABEL } from './pricing'
 import { forReaders } from './mapContract'
 
 /**
@@ -51,7 +51,7 @@ export function shareDraft(map, url = SHARE_URL, { withMoves = false, code = '',
   // ⭐ Tells them to use THIS link (Daniel, 7 Nov: "so the person knows to use
   // that specific one, not just sign in normally"), and, once there is money
   // in it, says the sender gets something: the honest way to recommend.
-  if (live) lines.push('', `My link gives you ${WAYOUT_FRIEND_DISCOUNT_LABEL} of the step by step help${code ? `, or enter my code ${code}` : ''}. (I get a small thank you if you stay.)`)
+  if (live) lines.push('', `My link gives you ${WAYOUT_FRIEND_DISCOUNT_LABEL} of the step by step help${code ? `, or enter my code ${code}` : ''}. (If you stay, I get ${WAYOUT_REFERRAL_SHARE_LABEL} of what you pay.)`)
   else if (url !== SHARE_URL) lines.push('', `Sign up through my link so I can see you joined${code ? `, or enter my code ${code}` : ''}.`)
   lines.push('', `Yours: ${url}`)
   return lines.join('\n')

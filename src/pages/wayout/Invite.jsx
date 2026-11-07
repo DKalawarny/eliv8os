@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import WayoutShell from './WayoutShell'
 import { Confirm } from './PlanThread'
 import { WAYOUT_BASE } from '../../lib/wayout/brand'
-import { WAYOUT_REFERRAL_LIVE, WAYOUT_FRIEND_DISCOUNT_LABEL, WAYOUT_FRIEND_DISCOUNT_THEIR, WAYOUT_CODE_DAYS } from '../../lib/wayout/pricing'
+import { WAYOUT_REFERRAL_LIVE, WAYOUT_FRIEND_DISCOUNT_LABEL, WAYOUT_FRIEND_DISCOUNT_THEIR, WAYOUT_CODE_DAYS, WAYOUT_REFERRAL_SHARE_LABEL } from '../../lib/wayout/pricing'
 import { shareDraft } from '../../lib/wayout/shareText'
 import {
   myInvites, myInvite, setShowName, createInvite, deleteInvite, inviteUrl, inviteTotals, friendStage,
@@ -20,9 +20,8 @@ import {
  *
  * ⚠️ Every line that names money waits for WAYOUT_REFERRAL_LIVE (pricing.js):
  * until payments are live there is nothing to discount and nothing to share,
- * so the page is about inviting and seeing who joined. The share itself is
- * never given as a number on screen until a lawyer has read the terms
- * (Daniel's call, 7 Nov).
+ * so the page is about inviting and seeing who joined. Once live, the share
+ * is shown as the number, 20% (Daniel, 7 Nov: "ya show the 20%").
  * 🔴 A friend's name shows only when that friend said yes (InviteConsent.jsx).
  * ⚠️ No "one level", "not a job" or other scheme-talk here: those rules live
  * in the terms. No dashes in copy.
@@ -105,7 +104,7 @@ export default function Invite() {
           </h1>
           <p>
             {WAYOUT_REFERRAL_LIVE
-              ? `Their plan is free. Your link or code gives them ${WAYOUT_FRIEND_DISCOUNT_THEIR} of the step by step help. When they stay, you get a thank you share.`
+              ? `Their plan is free. Your link or code gives them ${WAYOUT_FRIEND_DISCOUNT_THEIR} of the step by step help. When they stay, you get ${WAYOUT_REFERRAL_SHARE_LABEL} of what they pay.`
               : 'Send them your link. Their plan is free, and you will see here when they join.'}
           </p>
         </header>
@@ -115,7 +114,7 @@ export default function Invite() {
           {WAYOUT_REFERRAL_LIVE ? (
             <>
               <li className="is-2"><i>2</i><b>They get half off</b><span>Their plan is free, and their first month of step by step help is half price.</span></li>
-              <li className="is-3"><i>3</i><b>You get a thank you</b><span>A share of what they pay, from their second month, for as long as they stay.</span></li>
+              <li className="is-3"><i>3</i><b>You get {WAYOUT_REFERRAL_SHARE_LABEL}</b><span>Of what they pay, from their second month, for as long as they stay.</span></li>
             </>
           ) : (
             <>
@@ -204,8 +203,8 @@ export default function Invite() {
           <div>
             <b>Your thank you</b>
             <span>{WAYOUT_REFERRAL_LIVE
-              ? '$0 so far. Paid once someone you invited has paid their second month, for as long as they stay.'
-              : 'Nothing to pay or earn yet. When paid plans open, you will get a share of what the people you invited pay. The details will be here first.'}</span>
+              ? `$0 so far. ${WAYOUT_REFERRAL_SHARE_LABEL} of what each friend pays, from their second month, for as long as they stay.`
+              : `Nothing to pay or earn yet. When paid plans open, you will get ${WAYOUT_REFERRAL_SHARE_LABEL} of what the people you invited pay, from their second month. The details will be here first.`}</span>
           </div>
         </div>
 

@@ -46,12 +46,12 @@ describe('the invite message, by whether money is in it yet', () => {
   it('before payments: tells them to use the link or code, names no money', () => {
     const t = shareDraft(null, 'https://getunstuckmap.com/?i=abc', { code: 'DANNY-4F2', live: false })
     expect(t).toContain('Sign up through my link so I can see you joined, or enter my code DANNY-4F2.')
-    expect(t).not.toMatch(/half|share|thank you|\$/i)
+    expect(t).not.toMatch(/half|share|thank you|\$|%/i)
   })
   it('once live: the friend’s discount first, and the sender says they get something', () => {
     const t = shareDraft(null, 'https://getunstuckmap.com/?i=abc', { code: 'DANNY-4F2', live: true })
     expect(t).toContain('My link gives you half off your first month')
-    expect(t).toContain('(I get a small thank you if you stay.)')
-    expect(t).not.toMatch(/20|percent|%/)
+    // ⭐ Says plainly what the sender gets: the clearest disclosure there is.
+    expect(t).toContain('(If you stay, I get 20% of what you pay.)')
   })
 })
