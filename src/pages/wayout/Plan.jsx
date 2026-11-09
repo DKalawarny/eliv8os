@@ -654,7 +654,9 @@ export default function Plan() {
     const n = Number(order)
     const move = Number.isInteger(n) && n >= 1 && n <= 3 ? n : 1
     if (session) wantPlaybook(session.id).catch(() => {})
-    navigate(`${WAYOUT_BASE}/play/${move}`)
+    // ⭐ The path, opened on this move's next step (path.js stepForMove), not
+    // the old full page (Daniel, 9 Nov: "it doesn't do our steps like Duolingo").
+    navigate(`${WAYOUT_BASE}/path?move=${move}`)
   }
 
   /**

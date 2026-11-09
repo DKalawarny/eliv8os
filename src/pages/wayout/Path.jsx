@@ -10,7 +10,7 @@ import {
   loadPlaybook, generateMoveQuestions, generatePlaybook, savePlaybook, playbookIsStale, wantPlaybook,
 } from '../../lib/wayout/session'
 import {
-  pathIsStale, allSteps, currentStep, stepStatus, blockedBy, savedPerMonth, monthlyGap,
+  pathIsStale, stepForMove, allSteps, currentStep, stepStatus, blockedBy, savedPerMonth, monthlyGap,
   parseAmount, partIsFinished, untilFor, cheer, pickFresh, DONE_LINES,
 } from '../../lib/wayout/path'
 import { tick, buzz } from '../../lib/wayout/feedback'
@@ -131,7 +131,7 @@ export default function Path() {
         gap={monthlyGap(session?.map)}
         onState={onState}
         onHowTo={move => setHowTo(move)}
-        openStep={params.get('step')}
+        openStep={params.get('step') ?? stepForMove(path, state, Number(params.get('move')))}
         doneLink={`${WAYOUT_BASE}/done`}
       />
       {howTo && <HowToSheet session={session} order={howTo} onClose={() => setHowTo(null)} />}
@@ -214,6 +214,12 @@ export function PathView({ path, state, headline = '', gap = null, onState, move
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
   }, [measure])
+
+  // Opened on a step from a move's button: the path behind the sheet is at that move too.
+  useEffect(() => {
+    if (!openStep) return
+    try { document.querySelector(`[data-step="${CSS.escape(openStep)}"]`)?.scrollIntoView({ block: 'center' }) } catch { /* old browser */ }
+  }, [openStep])
 
   const close = () => setSheet(null)
   const open = (step, view = null) => {
@@ -316,6 +322,7 @@ export function PathView({ path, state, headline = '', gap = null, onState, move
                     <button
                       type="button"
                       className={`wayout__pnode is-${status}`}
+                      data-step={step.id}
                       style={{ left: `${x}%` }}
                       onClick={() => open(step)}
                       aria-label={`Step ${n}: ${step.title}`}

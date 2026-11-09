@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   enforcePathContract, pathKey, pathIsStale, currentStep, stepStatus, blockedBy,
-  savedPerMonth, monthlyGap, parseAmount, cheer, pickFresh, untilFor, MAX_STEPS,
+  savedPerMonth, monthlyGap, parseAmount, cheer, pickFresh, untilFor, MAX_STEPS, stepForMove,
 } from './path'
 
 const MAP = {
@@ -177,5 +177,22 @@ describe('the words when a step is done', () => {
     const all = new Set()
     for (let i = 0; i < 40; i++) all.add(cheer({ path, state, step: path.parts[1].steps[0], now: NOW }).head)
     for (const h of all) expect(h).not.toMatch(/amazing|proud|incredible|genius|you are|you're/i)
+  })
+})
+
+describe('stepForMove ("How to do it" on a move opens the path there)', () => {
+  it('opens a move on its first step when nothing is done', () => {
+    expect(stepForMove(path, {}, 3, NOW)).toBe('3.1')
+  })
+  it('skips what is done and lands on the next step', () => {
+    expect(stepForMove(path, { '3.1': { s: 'done' } }, 3, NOW)).toBe('3.2')
+  })
+  it('a finished move opens on its first step, to look back', () => {
+    expect(stepForMove(path, { '1.1': { s: 'done' }, '1.2': { s: 'tried' } }, 1, NOW)).toBe('1.1')
+  })
+  it('a move the path does not have, or no move, opens nothing', () => {
+    expect(stepForMove(path, {}, 7, NOW)).toBeNull()
+    expect(stepForMove(path, {}, NaN, NOW)).toBeNull()
+    expect(stepForMove(null, {}, 1, NOW)).toBeNull()
   })
 })

@@ -193,3 +193,18 @@ export function cheer({ path, state, step, saved = 0, gap = null, now = new Date
   const list = saved ? MONEY_HEADS : DONE_HEADS
   return { head: pickFresh(list, last[saved ? 'money' : 'done'], rand), from: saved ? 'money' : 'done' }
 }
+
+/**
+ * ⭐ "HOW TO DO IT" ON A MOVE OPENS THE PATH, NOT THE OLD PAGE (Daniel, 9 Nov
+ * 2026: /play/3 "doesn't do our steps like Duolingo"). /path?move=3 opens on
+ * that move's next step: the first one not done and not waiting on another,
+ * else the first not done, else its first step so a finished move can be
+ * looked back on.
+ */
+export function stepForMove(path, state, move, now = new Date()) {
+  const part = path?.parts?.find(p => p.move === move)
+  if (!part?.steps?.length) return null
+  const notDone = part.steps.filter(st => !DONE.has(state?.[st.id]?.s))
+  const ready = notDone.find(st => stepStatus(path, state ?? {}, st, now) !== 'blocked')
+  return (ready ?? notDone[0] ?? part.steps[0]).id
+}
