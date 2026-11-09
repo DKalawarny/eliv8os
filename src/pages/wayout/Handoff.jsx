@@ -51,15 +51,18 @@ export default function Handoff({ answers = {}, onTell }) {
         </aside>
       )}
       {owner && (
-        <aside className="wayout__bridge wayout__r">
-          <span className="wayout__offerkick">Share a few lines with Eliv8 OS</span>
+        // ⭐ CLOSED UNTIL THEY WANT IT (Daniel, 9 Nov 2026: "this should be a
+        // drop down and it should say if you have a business"). The heading
+        // says who it is for; the box only opens when they ask.
+        <details className="wayout__bridge wayout__handofffold wayout__r">
+          <summary>Have a business on Eliv8 OS? Share a few lines from this plan with it</summary>
           <p>Only what is in this box goes across, and only to you on Eliv8 OS. Nothing else from your plan is shared, and nobody else on your business account can see it.</p>
           <textarea className="wayout__handoffbox" rows={3} value={text} maxLength={1200} onChange={e => setText(e.target.value)} />
           <button type="button" className="wayout__again" disabled={busy || text.trim().length < 3} onClick={share}>
             {shared ? 'Update what is shared' : 'Share these lines'}
           </button>
           {msg && <p role="status">{msg}</p>}
-        </aside>
+        </details>
       )}
     </>
   )

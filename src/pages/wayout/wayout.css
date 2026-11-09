@@ -4131,3 +4131,9 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
 .wayout__i2or { margin-top: 20px; padding-top: 16px; border-top: 2px dashed var(--p-line); }
 .wayout__i2or > p { margin: 0; color: var(--p-muted); font-weight: 700; font-size: 15px; }
 .wayout__i2card .wayout__input { width: 100%; }
+/* The Eliv8 OS share box, folded (Handoff.jsx). */
+.wayout__handofffold > summary { cursor: pointer; list-style: none; display: flex; gap: 10px; align-items: baseline; justify-content: space-between; font-weight: 800; font-size: 15px; line-height: 1.45; }
+.wayout__handofffold > summary::-webkit-details-marker { display: none; }
+.wayout__handofffold > summary::after { content: '▾'; color: var(--soft); flex: none; transition: transform .15s ease; }
+.wayout__handofffold[open] > summary::after { transform: rotate(180deg); }
+.wayout__handofffold[open] > summary { margin-bottom: 4px; }
