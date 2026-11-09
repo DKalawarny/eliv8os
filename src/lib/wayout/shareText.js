@@ -1,4 +1,4 @@
-import { WAYOUT_NAME, WAYOUT_SITE_URL, WAYOUT_TOTAL_TIME } from './brand'
+import { WAYOUT_NAME, WAYOUT_SITE_URL } from './brand'
 import { WAYOUT_REFERRAL_LIVE, WAYOUT_REFERRAL_ANNOUNCED, WAYOUT_FRIEND_DISCOUNT_LABEL, WAYOUT_REFERRAL_SHARE_LABEL } from './pricing'
 import { forReaders } from './mapContract'
 
@@ -45,7 +45,7 @@ export function movesBlock(map) {
  * `url` is their own invite link when they have one (invites.js), so the friend counts.
  */
 export function shareDraft(map, url = SHARE_URL, { withMoves = false, code = '', live = WAYOUT_REFERRAL_LIVE, announced = WAYOUT_REFERRAL_ANNOUNCED } = {}) {
-  const lines = [`I have been using ${WAYOUT_NAME} to work out what to do first. Getting your plan is free, and the questions take ${WAYOUT_TOTAL_TIME}.`]
+  const lines = [`I have been using ${WAYOUT_NAME} to work out what to do first. You answer some questions about your situation and it gives you a plan, free.`]
   const moves = withMoves ? movesBlock(map) : ''
   if (moves) lines.push('', moves)
   // ⭐ Tells them to use THIS link (Daniel, 7 Nov: "so the person knows to use
