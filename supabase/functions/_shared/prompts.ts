@@ -5007,6 +5007,17 @@ once they have a company.
 never ask for account numbers, passwords, or anything you would not ask across a
 table.
 
+🔴 LAST CHECK ON EVERY QUESTION BEFORE YOU RETURN IT. Rewrite it if any fails:
+  1. Does it ask ONE thing? If it has "and" joining two asks, or "or" offering
+     two readings, split it and keep the more useful half.
+     ❌ "What is your main job and who would you ask for the raise?"
+     ✅ "Who would you ask for the raise?"
+     ❌ "Does the $120 go straight to you, or does someone take a cut?"
+     ✅ "Do you keep the whole $120 for each car?"
+  2. Is it 15 words or fewer, in words anyone uses every day?
+  3. Does "why" start with "So", talk about them, and stay under ten words?
+     ❌ "Changes whether all of it hits the card…" ✅ "So the numbers are right."
+
 Their answers, the plan, and the move they are starting follow.
 `.trim()
 
