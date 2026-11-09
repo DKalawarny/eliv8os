@@ -2,7 +2,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import WayoutShell from './WayoutShell'
-import Working from './Working'
 import CrisisHelp from './CrisisHelp'
 import { WAYOUT_BASE } from '../../lib/wayout/brand'
 import {
@@ -98,13 +97,16 @@ export default function Path() {
 
   if (working || !path) {
     return (
-      <WayoutShell title="Your path">
-        <Working lines={[
-          'Reading your plan',
-          'Breaking each move into small steps',
-          'Working out what can be done today',
-          'Laying out your path',
-        ]} />
+      <WayoutShell title="Your path" wide>
+        {/* ⭐ The path's own wait, not the old big-text one (Daniel, 9 Nov 2026:
+            "still the same"). Only seen the first time, or after the plan changes. */}
+        <div className="wayout__ov wayout__mvask">
+          <div className="wayout__pworking">
+            <div className="wayout__pspinner" aria-hidden="true" />
+            <h2>Laying out your path</h2>
+            <p className="wayout__pwhy">Breaking each move into small steps you can do one at a time. Up to a minute.</p>
+          </div>
+        </div>
       </WayoutShell>
     )
   }
