@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import WayoutShell from './WayoutShell'
 import Playbook from './Playbook'
-import Working from './Working'
 import { WAYOUT_BASE } from '../../lib/wayout/brand'
 import {
   loadOrCreateSession, generatePlaybook, generateMoveQuestions, loadPlaybook, savePlaybook,
@@ -74,94 +73,66 @@ import { pathIsStale, stepStatus } from '../../lib/wayout/path'
  * not to fill in a form, and a question they do not want to answer is itself
  * an answer — the play gets written either way.
  */
-function Asking({ move, questions, busy, onSubmit }) {
+/** ⭐ The path's wait, not the old one (Daniel, 9 Nov 2026: "old design"). */
+function MoveWait() {
+  return (
+    <div className="wayout__ov wayout__mvask">
+      <div className="wayout__pworking">
+        <div className="wayout__pspinner" aria-hidden="true" />
+        <h2>Getting this move ready</h2>
+        <p className="wayout__pwhy">What to do first, the words to use, and what usually goes wrong. Up to a minute.</p>
+      </div>
+    </div>
+  )
+}
+
+function Asking({ move, order, questions, busy, onSubmit }) {
   const [answers, setAnswers] = useState({})
+  const [at, setAt] = useState(0)
 
   if (busy) {
     return (
       <WayoutShell title="This week" wide>
-        {/* ⚠️ THE WAIT SOMEBODY REACHES EVERY TIME THEY OPEN A MOVE, which is
-            why it was the one Daniel kept landing on. The first line
-            acknowledges what they just typed — this is the only wait that
-            FOLLOWS their input — and the rest name the sections of the week
-            about to arrive. */}
-        <Working foot="Up to a minute." lines={[
-          'Reading what you told us.',
-          'Working out the week.',
-          'Finding what usually goes wrong.',
-          'Writing it down.',
-        ]} />
+        <MoveWait />
       </WayoutShell>
     )
   }
 
+  // ⭐⭐ ONE QUESTION AT A TIME, IN THE PATH'S STYLE (Daniel, 9 Nov 2026: "old
+  // design and back to terrible wording… make things simple"). Same as the
+  // questions inside the path (Path.jsx HowToSheet). Every one can be skipped;
+  // the steps get written either way.
+  const q = questions[at]
+  const last = at === questions.length - 1
+  const next = () => (last ? onSubmit(answers) : setAt(at + 1))
   return (
-    <WayoutShell title="A few questions first">
-      {/* ⚠️ Same reason as the playbook's crumb — this screen asks two questions
-          and then commits to writing a week, and until now the only exit was the
-          browser's back button. */}
-      <p className="wayout__crumb">
-        <Link to={`${WAYOUT_BASE}/plan`}>← The whole plan</Link>
-      </p>
-      <p className="wayout__q">
-        {questions.length > 1 ? `${questions.length} quick questions first.` : 'One quick question first.'}
-      </p>
-      <p className="wayout__lead">
-        {/* 🔴 "the week I write — weird again." It read "what you say here changes
-            the week I write, not just the wording of it." Two faults in one
-            sentence: "the week I write" is the product narrating its own
-            production schedule, which is machinery nobody asked about, and it
-            promises a WEEK to somebody who is looking at a plan measured in
-            months. What the answers actually change is the content of the plan.
-            ⚠️ Counted, not "two" — the heading above says how many there are and
-            a fixed number beneath a variable one is the kind of small wrongness
-            that makes a reader check everything else. */}
-        {move?.title ? `You are starting: ${move.title}. ` : ''}
-        {questions.length === 1
-          ? 'Your answer changes what the steps say.'
-          : 'Your answers change what the steps say.'}
-      </p>
-
-      {questions.map((q, i) => (
-        <div key={i} className="wayout__askq">
-          <p className="wayout__label">{q.q}</p>
-          {q.why && <p className="wayout__hint">{q.why}</p>}
-
-          {q.options?.length > 0 && (
-            <div className="wayout__chips">
-              {q.options.map(opt => (
-                <button
-                  key={opt}
-                  type="button"
-                  className={`wayout__chip${answers[i] === opt ? ' wayout__chip--on' : ''}`}
-                  aria-pressed={answers[i] === opt}
-                  onClick={() => setAnswers(a => ({ ...a, [i]: opt }))}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* ⚠️ The box is there even when there are chips. The chips are the
-              fast answer; the box is where the true one goes when it does not
-              fit in four words, and this product is built on people being able
-              to say the thing that was not on the list. */}
-          <textarea
-            className="wayout__textarea"
-            value={answers[`${i}:note`] ?? ''}
-            onChange={e => setAnswers(a => ({ ...a, [`${i}:note`]: e.target.value }))}
-            placeholder={q.options?.length ? 'Anything that does not fit the buttons.' : 'A sentence is enough.'}
-          />
+    <WayoutShell title="A few questions first" wide>
+      <div className="wayout__ov wayout__mvask">
+        <p className="wayout__crumb">
+          <Link to={`${WAYOUT_BASE}/plan`}>← Back to your plan</Link>
+        </p>
+        <p className="wayout__oveyebrow">Move {order}{move?.title ? ` · ${move.title}` : ''}</p>
+        <div className="wayout__pdots" aria-hidden="true">{questions.map((_, i) => <i key={i} className={i <= at ? 'is-on' : ''} />)}</div>
+        <p className="wayout__mvaskcount">Question {at + 1} of {questions.length}</p>
+        <h2>{q.q}</h2>
+        {q.why && <p className="wayout__pwhy">{q.why}</p>}
+        {q.options?.length > 0 && (
+          <div className="wayout__ppicks">
+            {q.options.map(opt => (
+              <button key={opt} type="button" className={`wayout__ppick is-wide${answers[at] === opt ? ' is-picked' : ''}`}
+                aria-pressed={answers[at] === opt}
+                onClick={() => setAnswers(a => ({ ...a, [at]: opt }))}>{opt}</button>
+            ))}
+          </div>
+        )}
+        <label className="wayout__pown-label" htmlFor={`wayout-ask-${at}`}>{q.options?.length ? 'Or say it in your own words' : 'Your answer'}</label>
+        <textarea id={`wayout-ask-${at}`} className="wayout__ptext" rows={3} placeholder="A sentence is enough."
+          value={answers[`${at}:note`] ?? ''} onChange={e => setAnswers(a => ({ ...a, [`${at}:note`]: e.target.value }))} />
+        <div className="wayout__pacts">
+          <button type="button" className="wayout__pbtn is-go" onClick={next}>{last ? 'Show me how' : 'Next'}</button>
+          <button type="button" className="wayout__pbtn is-soft" onClick={next}>Skip this one</button>
         </div>
-      ))}
-
-      <button className="wayout__btn wayout__btn--sun" onClick={() => onSubmit(answers)}>
-        Write it
-      </button>
-      <p className="wayout__hint">
-        Skip anything you would rather not answer. We will write your steps either way.
-      </p>
+      </div>
     </WayoutShell>
   )
 }
@@ -493,6 +464,7 @@ function PlayMove({ order }) {
     return (
       <Asking
         move={move}
+        order={order}
         questions={ask.questions}
         busy={loading}
         onSubmit={answers => write(session, move, { questions: ask.questions, answers })}
@@ -503,15 +475,7 @@ function PlayMove({ order }) {
   if (loading || !play) {
     return (
       <WayoutShell title="This week" wide>
-        {/* ⚠️ The lines are the SECTIONS OF THE WALKTHROUGH, in the order they
-            will appear — which is why this screen is allowed to exist at all.
-            See the top of Working.jsx for the rule it obeys. */}
-        <Working foot="Up to a minute." lines={[
-          'What to do first.',
-          'The words to use.',
-          'What you need before you start.',
-          'What usually goes wrong.',
-        ]} />
+        <MoveWait />
       </WayoutShell>
     )
   }

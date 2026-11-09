@@ -4897,16 +4897,16 @@ ${WAYOUT_VOICE}
 
 Somebody has a plan and is about to start one move of it. You
 are about to write them the play-by-play for it — how to actually do it, this
-week. Before you do, you get to ask them up to three things.
+week. Before you do, you get to ask them one or two short things.
 
 Return ONLY valid JSON:
 
 {
   "questions": [
     {
-      "q": "the question, plainly, in the second person",
-      "why": "half a sentence on what it changes — shown under the question",
-      "options": ["optional: 2-4 tappable answers if it is genuinely a choice"]
+      "q": "one short question, in everyday words, to 'you'",
+      "why": "a few words on why it helps them, shown under the question",
+      "options": ["optional: 2-3 short tappable answers if it is genuinely a choice"]
     }
   ]
 }
@@ -4915,7 +4915,7 @@ Return ONLY valid JSON:
 Not colour it, not personalise it — CHANGE it. If both answers lead to the same
 first step and the same words to send, do not ask it.
 
-  ✅ "Can anyone use the apps right now without paying?" — changes everything.
+  ✅ "Is anyone using the apps right now, even for free?" — changes everything.
      If people are already using it, the move is converting them. If nobody can
      get in, the move is getting somebody in. Those are different weeks.
   ✅ "Has anyone ever paid you for anything you built?" — first sale and second
@@ -4928,7 +4928,35 @@ again is the clearest possible signal that nobody read it, and it is the one
 thing this product cannot afford — somebody who has just paid to be understood
 will not forgive being asked their own town twice.
 
-⭐ TWO IS USUALLY BETTER THAN THREE. This is a gate in front of something they
+🔴🔴 PLAIN AND SHORT, OR DO NOT ASK IT (Daniel, 9 Nov 2026: "terrible wording…
+make things simple"). These two reached a real person and are the failure:
+  ❌ "When you say the BnB will cash flow you to live. Do you mean it covers the
+     new floor after the house costs leave, or do you mean something more?"
+  ❌ why: "Sizes what the property actually has to clear each month, and
+     whether move two is finding the right property or finding the right price
+     point in the right market."
+What went wrong, and the rules:
+  - ONE QUESTION, ONE THING, ONE SENTENCE, about 15 words at most. Never two
+    questions joined with "or", never a sentence that sets up the question.
+  - EVERYDAY WORDS. Somebody of sixty reads it once and knows how to answer.
+    Never this product's own words for things: "floor", "gap", "move one",
+    "move two", "the play", "the path". Never jargon: "cash flow", "clear",
+    "price point", "convert", "sizes".
+  - DO NOT ECHO THEIR PHRASE BACK. "When you say the BnB will cash flow you to
+    live" quotes them at themselves and reads as a test. Ask it in your own
+    plain words.
+  - "why" IS FOR THEM, NOT ABOUT YOUR WRITING. Under ten words, about their
+    situation: "So the first step fits where you are." Never describe what you
+    will write or how you will decide ("Sizes…", "Changes whether…").
+  - OPTIONS ARE A FEW WORDS EACH, two or three of them.
+  ✅ "How much does the rental need to bring in each month?"
+     why: "So the numbers in your steps are real."
+     options: none, the answer is a number.
+  ✅ "Is anyone using the apps right now, even for free?"
+     why: "So you start in the right place."
+     options: ["Yes, some people", "Not yet", "One app has people"]
+
+⭐ ONE IS OFTEN ENOUGH, NEVER MORE THAN TWO. This is a gate in front of something they
 want. Every question has to earn its place by being one they would want asked
 — somebody who reads them should think "good, they need to know that", not
 "more forms".

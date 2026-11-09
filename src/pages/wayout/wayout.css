@@ -4137,3 +4137,12 @@ html:has(.wayout), body:has(.wayout) { background: #F5F1E6; }
 .wayout__handofffold > summary::after { content: '▾'; color: var(--soft); flex: none; transition: transform .15s ease; }
 .wayout__handofffold[open] > summary::after { transform: rotate(180deg); }
 .wayout__handofffold[open] > summary { margin-bottom: 4px; }
+/* The move's questions and wait on /play/N, in the path's style (Play.jsx Asking). */
+.wayout__mvask { max-width: 620px; margin: 0 auto; }
+.wayout__mvask h2 { font-size: clamp(24px, 3.6vw, 32px); line-height: 1.2; font-weight: 900; letter-spacing: -.01em; margin: 6px 0 10px; text-wrap: balance; }
+.wayout__mvask .wayout__pwhy { font-size: 16px; line-height: 1.55; margin: 0 0 16px; }
+.wayout__mvask .wayout__pdots { margin: 14px 0 8px; }
+.wayout__mvaskcount { margin: 0; font-size: 13px; font-weight: 800; color: var(--p-muted); }
+.wayout__mvask .wayout__ppicks { display: grid; gap: 10px; margin-bottom: 4px; }
+.wayout__mvask .wayout__pacts { margin-top: 18px; }
+.wayout__mvask .wayout__pworking { padding: 60px 0; }

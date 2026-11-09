@@ -751,12 +751,12 @@ export async function generateMoveQuestions({ answers, map, move }) {
     const parsed = parseModelJson(raw, 'The questions')
     const questions = (parsed?.questions ?? [])
       .filter(q => String(q?.q ?? '').trim())
-      .slice(0, 3)
+      .slice(0, 2)
       // 🔴 "a step toward your Tuesday" reached a person from here on 1 Oct.
       .map(q => ({
         q: forReaders(String(q.q).trim()),
         why: forReaders(String(q.why ?? '').trim()),
-        options: Array.isArray(q.options) ? q.options.map(o => forReaders(String(o))).slice(0, 4) : [],
+        options: Array.isArray(q.options) ? q.options.map(o => forReaders(String(o))).slice(0, 3) : [],
       }))
     return questions
   } catch (err) {
