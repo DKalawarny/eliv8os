@@ -53,7 +53,18 @@ const STAGE_DESCRIPTIONS = {
  * on a brand-new profile.
  */
 export function detectStage(revenue) {
-  return STAGE_BY_REVENUE[revenue] ?? 'Startup'
+  if (STAGE_BY_REVENUE[revenue]) return STAGE_BY_REVENUE[revenue]
+  // A typed figure ("2.8M", "$450k", "450000") is not one of the labels. It
+  // fell through to 'Startup', so a $2.8M, 18-person company was described to
+  // Solomon and every tool as a startup (11 Nov 2026 audit).
+  const m = String(revenue ?? '').replace(/[$,\s]/g, '').match(/^(\d+(?:\.\d+)?)([kKmM]?)$/)
+  if (!m) return 'Startup'
+  const n = Number(m[1]) * ({ k: 1e3, m: 1e6 }[m[2].toLowerCase()] ?? 1)
+  if (n >= 10e6) return 'Enterprise'
+  if (n >= 5e6)  return 'Growth Engine'
+  if (n >= 1e6)  return 'Scaling'
+  if (n >= 100e3) return 'Early Growth'
+  return 'Startup'
 }
 
 /**
