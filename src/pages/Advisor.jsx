@@ -335,6 +335,15 @@ export default function Advisor() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length, sending, generatingOpen, toolActivity])
 
+  // Closing or reloading mid-answer throws the reply away (it is saved when it
+  // finishes, and a tool run can take a minute). Ask the browser to check first.
+  useEffect(() => {
+    if (!sending) return
+    const warn = e => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [sending])
+
   // ── Send message ──────────────────────────────────────────────────────────
 
   async function handleSend(e) {
@@ -429,7 +438,16 @@ export default function Advisor() {
       const context = await buildAdvisorContext(profile.company_id, { userId: profile.id, query: text })
 
       // 3. Build system prompt with context + long-term memory.
-      const historySlice = nextMessages.slice(-HISTORY_TURNS_SENT).map(m => ({
+      // ⚠️ Drop questions that never got a reply. A reply is saved only when it
+      // finishes, so closing the page mid-answer leaves the question behind
+      // with nothing after it, and Solomon then answered it again with the
+      // next one: the 11 Nov audit saw one abandoned cash-flow request re-run
+      // the tool on five later questions, each one a paid run off the monthly
+      // tool count. The newest message is the one being asked, so it stays.
+      const recent = nextMessages.slice(-HISTORY_TURNS_SENT)
+      const answered = recent.filter((m, i) =>
+        m.role === 'assistant' || i === recent.length - 1 || recent[i + 1]?.role === 'assistant')
+      const historySlice = answered.map(m => ({
         role:    m.role === 'assistant' ? 'assistant' : 'user',
         content: m.content,
       }))
