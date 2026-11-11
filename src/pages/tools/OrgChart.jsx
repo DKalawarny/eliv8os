@@ -388,7 +388,7 @@ function LoadingView({ horizon }) {
           Org Chart
         </div>
         <h2 className="text-2xl font-bold text-white tracking-tight">{horizon ? `Your team in ${horizon}` : 'The team you need next'}</h2>
-        <p className="text-sm text-ink-500 mt-1.5">Usually 20 to 35 seconds</p>
+        <p className="text-sm text-ink-500 mt-1.5">Usually 45 to 90 seconds</p>
       </div>
       <div className="w-full max-w-xs space-y-1">
         {ORG_STEPS.map((step, i) => {
