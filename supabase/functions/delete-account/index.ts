@@ -37,6 +37,7 @@
 
 import { json, preflight } from '../_shared/cors.ts'
 import { serviceClient } from '../_shared/supabase.ts'
+import { removeCompanyFiles } from '../_shared/storageCleanup.ts'
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return preflight()
@@ -87,6 +88,9 @@ Deno.serve(async (req: Request) => {
       if (cErr) throw new Error(`member count failed: ${cErr.message}`)
 
       if ((count ?? 0) === 0) {
+        // Files first: once the company row is gone nothing records which
+        // folder was theirs, and the files would outlive the "delete".
+        await removeCompanyFiles(admin, companyId)
         const { error: delErr } = await admin
           .from('companies')
           .delete()

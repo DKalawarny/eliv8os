@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
@@ -282,7 +282,7 @@ Return JSON only:
 
         {/* Page header */}
         <div className="bg-white border-b border-ink-100">
-          <div className="max-w-3xl mx-auto px-8 py-5 flex items-center justify-between gap-4 flex-wrap">
+          <div className="max-w-3xl mx-auto px-4 sm:px-8 py-5 flex items-center justify-between gap-4 flex-wrap">
             <div>
               <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-700 mb-0.5">
                 Team Newsletter
@@ -290,7 +290,7 @@ Return JSON only:
               <h1 className="text-lg font-bold text-ink-900 leading-tight">{period}</h1>
               <p className="text-xs text-ink-500 mt-0.5">Click any text to edit before copying.</p>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => setStage('form')}
@@ -341,7 +341,7 @@ Return JSON only:
           </div>
         </div>
 
-        <div className="max-w-3xl mx-auto px-8 py-6 space-y-4">
+        <div className="max-w-3xl mx-auto px-4 sm:px-8 py-6 space-y-4">
           {error && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
           )}
@@ -352,15 +352,14 @@ Return JSON only:
           <div className="bg-white border border-ink-100 rounded-2xl shadow-sm overflow-hidden">
 
             {/* Subject */}
-            <div className="flex items-center gap-3 px-6 py-3.5 bg-ink-50 border-b border-ink-100">
+            <div className="flex items-start gap-3 px-4 sm:px-6 py-3.5 bg-ink-50 border-b border-ink-100">
               <span className="text-[10px] font-bold uppercase tracking-widest text-ink-400 flex-shrink-0">
                 Subject
               </span>
-              <input
-                type="text"
+              <GrowingTextarea
                 value={result.subject ?? ''}
                 onChange={e => updateField('subject', e.target.value)}
-                className="flex-1 bg-transparent text-sm font-semibold text-ink-900 border-0 outline-none ring-0 focus:ring-0 p-0"
+                className="flex-1 min-w-0 resize-none overflow-hidden bg-transparent text-sm font-semibold text-ink-900 border-0 outline-none ring-0 focus:ring-0 p-0"
                 placeholder="Subject line…"
               />
             </div>
@@ -368,34 +367,32 @@ Return JSON only:
             {/* Sections */}
             <div className="divide-y divide-ink-50">
               {(result.sections ?? []).map((s, i) => (
-                <div key={i} className="px-8 py-5 group/sec">
+                <div key={i} className="px-4 sm:px-8 py-5 group/sec">
                   <div className="flex items-start gap-3">
-                    <input
-                      type="text"
+                    <GrowingTextarea
                       value={s.heading ?? ''}
                       onChange={e => updateSection(i, 'heading', e.target.value)}
-                      className="block flex-1 text-[10.5px] font-bold uppercase tracking-widest text-ink-400 border-0 outline-none ring-0 focus:ring-0 bg-transparent p-0 mb-2.5"
+                      className="block flex-1 min-w-0 resize-none overflow-hidden text-[10.5px] font-bold uppercase tracking-widest text-ink-400 border-0 outline-none ring-0 focus:ring-0 bg-transparent p-0 mb-2.5"
                       placeholder={s.custom ? 'Give this section a heading, e.g. Safety reminder' : 'Section heading…'}
                     />
                     <button
                       type="button"
                       onClick={() => removeSection(i)}
-                      className="flex-shrink-0 text-[11px] text-ink-300 hover:text-red-600 opacity-0 group-hover/sec:opacity-100 focus:opacity-100 transition-opacity"
+                      className="flex-shrink-0 text-[11px] text-ink-300 hover:text-red-600 sm:opacity-0 sm:group-hover/sec:opacity-100 focus:opacity-100 transition-opacity"
                     >
                       Remove section
                     </button>
                   </div>
-                  <textarea
+                  <GrowingTextarea
                     value={s.body ?? ''}
                     onChange={e => updateSection(i, 'body', e.target.value)}
-                    rows={Math.max(3, Math.ceil((s.body?.length ?? 0) / 90))}
-                    className="block w-full text-sm text-ink-800 leading-relaxed border border-transparent hover:border-ink-200 focus:border-brand-300 focus:ring-1 focus:ring-brand-200 rounded-lg bg-transparent p-2 -mx-2 resize-none transition-colors outline-none"
+                    className="block w-full overflow-hidden text-sm text-ink-800 leading-relaxed border border-transparent hover:border-ink-200 focus:border-brand-300 focus:ring-1 focus:ring-brand-200 rounded-lg bg-transparent p-2 -mx-2 resize-none transition-colors outline-none"
                     placeholder={s.custom ? 'Write what you want the team to know. A birthday, a new truck, a reminder, a thank you.' : 'Section body…'}
                   />
                 </div>
               ))}
 
-              <div className="px-8 py-4">
+              <div className="px-4 sm:px-8 py-4">
                 <button
                   type="button"
                   onClick={addSection}
@@ -410,7 +407,7 @@ Return JSON only:
 
               {/* Sign off */}
               {result.sign_off !== undefined && (
-                <div className="px-8 py-5 bg-ink-50/50">
+                <div className="px-4 sm:px-8 py-5 bg-ink-50/50">
                   <textarea
                     value={result.sign_off ?? ''}
                     onChange={e => updateField('sign_off', e.target.value)}
@@ -624,4 +621,18 @@ function DataRow({ icon, label, items, empty }) {
       </div>
     </div>
   )
+}
+
+// A textarea that is always as tall as its text. The row count used to be
+// guessed at 90 characters a line, which on a phone (about 35) cut every
+// section off mid-sentence behind a box with no scrollbar.
+function GrowingTextarea({ value, ...rest }) {
+  const ref = useRef(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [value])
+  return <textarea ref={ref} value={value} rows={1} {...rest} />
 }

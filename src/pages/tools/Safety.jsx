@@ -592,7 +592,7 @@ function CollapsibleSection({ title, badge, badgeTone, open, onToggle, hint, act
             {title}
           </span>
           {badge && (
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeClass}`}>
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 ${badgeClass}`}>
               {badge}
             </span>
           )}
@@ -710,7 +710,7 @@ function DocRow({ doc, renewalIso, onSetRenewal, onView, onDelete }) {
 
   return (
     <div className="px-5 py-3 hover:bg-ink-50 transition-colors group">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1.5">
         <span className="text-xl flex-shrink-0">{/pdf/i.test(doc.mime_type) ? '📄' : '📝'}</span>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold text-ink-800 truncate">{doc.title}</div>
@@ -724,7 +724,10 @@ function DocRow({ doc, renewalIso, onSetRenewal, onView, onDelete }) {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Hover-only on a mouse. On a phone there is no hover: the buttons
+            were invisible yet still took the row's width, squeezing the file
+            name to "Co…" (11 Nov audit). They sit on their own line there. */}
+        <div className="flex items-center gap-1 w-full sm:w-auto pl-8 sm:pl-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           <button type="button" onClick={() => setEditing(v => !v)}
             className="px-2.5 py-1.5 text-[11px] font-semibold text-ink-500 hover:bg-ink-100 rounded-md transition-colors">
             {renewalIso ? 'Edit renewal' : 'Set renewal'}

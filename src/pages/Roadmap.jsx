@@ -2345,8 +2345,11 @@ function ListView({
     <div className="space-y-6">
       {filteredGroups.map(group => {
         const heading = TIMEFRAME_LABEL[group.timeframe] ?? group.timeframe
-        const firstEnd = group.items[0]?.end_date
-        const subtitle = firstEnd ? `By ${formatFriendlyDate(firstEnd)}` : null
+        // "By" means when the whole group is done: the LATEST end date. It
+        // used the first row's, so a finished August milestone made "Next 90
+        // days" read "By August 2026" in November (11 Nov audit).
+        const lastEnd = group.items.map(m => m.end_date).filter(Boolean).sort().at(-1)
+        const subtitle = lastEnd ? `By ${formatFriendlyDate(lastEnd)}` : null
         return (
           <section key={group.timeframe}>
             <div className="flex items-baseline gap-2 mb-3">
@@ -2442,9 +2445,28 @@ function MilestoneRow({
           onClick={onToggleExpand}
           className="flex-1 text-left min-w-0"
         >
-          <p className={`text-sm font-semibold leading-snug truncate ${completed ? 'line-through text-ink-400' : 'text-ink-900'}`}>
+          {/* Two lines on a phone: the name chips beside it left room for "Write …". */}
+          <p className={`text-sm font-semibold leading-snug line-clamp-2 sm:line-clamp-none sm:truncate ${completed ? 'line-through text-ink-400' : 'text-ink-900'}`}>
             {title}
           </p>
+          {/* On a phone the names sit under the title, not beside it. */}
+          {assignees.length > 0 && (
+            <div className="sm:hidden mt-1 flex flex-wrap gap-1">
+              {assignees.slice(0, 3).map(p => (
+                <span
+                  key={p.id}
+                  className={`text-[10px] font-semibold whitespace-nowrap px-2 py-0.5 rounded-full border ${
+                    p._t === 'staff'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-ink-100 text-ink-700 border-ink-200'
+                  }`}
+                >
+                  {p.name?.split(' ')[0] || p.email}
+                </span>
+              ))}
+              {assignees.length > 3 && <span className="text-[10px] font-semibold text-ink-500">+{assignees.length - 3}</span>}
+            </div>
+          )}
           {!expanded && !completed && pct > 0 && (
             <div className="mt-1.5 flex items-center gap-2">
               <div className="h-1 w-32 bg-ink-100 rounded-full overflow-hidden">
@@ -2476,12 +2498,12 @@ function MilestoneRow({
           rest collapse into "+N" with a tooltip listing all names.
         */}
         {assignees.length > 0 ? (
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
             {assignees.slice(0, 2).map(p => (
               <Tooltip
                 key={p.id}
                 label={p.name || p.email}
-                sublabel={p._t === 'staff' ? 'Team staff · gets email' : 'App user · sees in dashboard'}
+                sublabel={p._t === 'staff' ? (p.email ? 'Team staff · gets email' : 'Team staff · no email on file') : 'App user · sees in dashboard'}
                 position="top-right"
               >
                 <span
@@ -2519,7 +2541,7 @@ function MilestoneRow({
         <button
           type="button"
           onClick={e => { e.stopPropagation(); onOpenWorkOrder?.(milestone.id, milestone.title, '') }}
-          className="opacity-0 group-hover/row:opacity-100 transition-opacity w-7 h-7 rounded-full flex items-center justify-center border border-ink-200 hover:border-brand-300 hover:text-brand-600 text-ink-400 bg-white flex-shrink-0"
+          className="opacity-0 group-hover/row:opacity-100 pointer-coarse:opacity-100 transition-opacity w-7 h-7 rounded-full flex items-center justify-center border border-ink-200 hover:border-brand-300 hover:text-brand-600 text-ink-400 bg-white flex-shrink-0"
           title="Create a job"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -2633,7 +2655,7 @@ function MilestoneRow({
                       <button
                         type="button"
                         onClick={e => { e.stopPropagation(); onOpenWorkOrder?.(milestone.id, milestone.title, a) }}
-                        className="flex-shrink-0 opacity-0 group-hover/action:opacity-100 transition-opacity text-[10px] font-semibold text-brand-600 hover:text-brand-800 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-2 py-0.5 rounded-full whitespace-nowrap mt-0.5"
+                        className="flex-shrink-0 opacity-0 group-hover/action:opacity-100 pointer-coarse:opacity-100 transition-opacity text-[10px] font-semibold text-brand-600 hover:text-brand-800 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-2 py-0.5 rounded-full whitespace-nowrap mt-0.5"
                         title="Create a job for this action"
                       >
                         {actionAssignee ? 'Reassign' : '+ Task'}

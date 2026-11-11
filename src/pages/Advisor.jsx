@@ -196,6 +196,9 @@ export default function Advisor() {
 
   const generateMorningOpener = useCallback(async () => {
     if (!profile?.company_id || !profile?.id) return
+    // The demo is refused at the edge, so asking only puts a 403 in the
+    // console on every visit to this page (found in the 11 Nov audit).
+    if (isDemoCompany(company)) return
     setGeneratingOpen(true)
     try {
       const context = await buildAdvisorContext(profile.company_id, { userId: profile.id })
@@ -267,7 +270,7 @@ export default function Advisor() {
     } finally {
       setGeneratingOpen(false)
     }
-  }, [profile?.company_id, profile?.id])
+  }, [profile?.company_id, profile?.id, company])
 
   // ── Load history + trigger morning opener ────────────────────────────────
 
@@ -1017,7 +1020,7 @@ function ListenButton({ text }) {
       type="button"
       onClick={toggle}
       title={state === 'device' ? 'Using your device voice. Solomon\u2019s own voice is unavailable' : 'Listen'}
-      className="absolute -bottom-5 right-14 flex items-center gap-1 text-[10px] font-medium transition-opacity px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 focus:opacity-100"
+      className="absolute -bottom-5 right-14 flex items-center gap-1 text-[10px] font-medium transition-opacity px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 focus:opacity-100"
       style={{ color: state === 'idle' ? 'rgba(13,20,19,0.35)' : '#0b6b4e' }}
     >
       {state === 'loading' ? 'Loading…'

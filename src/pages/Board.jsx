@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { sendTaskAssigned } from '../lib/email'
 import { AMOUNTS_EMBED, withAmounts, canSeeJobCosts, saveJobAmounts } from '../lib/jobAmounts'
-import { listTaskAttachments, uploadTaskAttachment, deleteTaskAttachment, openTaskAttachment, TASK_ATTACH_MAX_MB } from '../lib/taskAttachments'
+import { listTaskAttachments, uploadTaskAttachment, deleteTaskAttachment, openTaskAttachment, removeFilesForTask, TASK_ATTACH_MAX_MB } from '../lib/taskAttachments'
 
 /**
  * Jobs — /board
@@ -359,6 +359,7 @@ export default function Board() {
   async function handleDelete(orderId, title) {
     if (!window.confirm(`Delete "${title || 'this task'}"? This cannot be undone.`)) return
     setWorkOrders(prev => prev.filter(o => o.id !== orderId))
+    await removeFilesForTask(orderId)
     await supabase.from('work_orders').delete().eq('id', orderId)
   }
 
@@ -837,7 +838,7 @@ function WorkOrderCard({ order, members = [], milestone, onEdit, onMove, onDelet
         {/* Title + action buttons */}
         <div className="flex items-start gap-2 mb-2">
           <h3 className="text-sm font-semibold text-ink-900 leading-snug flex-1">{order.title}</h3>
-          <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 transition-opacity">
             <button type="button" onClick={onEdit}
               className="p-1.5 rounded-lg hover:bg-ink-100 text-ink-400 hover:text-ink-700 transition-colors" title="Edit">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth="1.8">

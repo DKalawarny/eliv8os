@@ -8,6 +8,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { streamToolCall } from '../lib/anthropic'
+import { isDemoCompany } from '../lib/demo'
 
 // ── Action plan helpers ───────────────────────────────────────────────────────
 
@@ -110,18 +111,28 @@ const REVENUE_MIDPOINTS = {
 }
 
 function parseRevenue(label) {
-  return REVENUE_MIDPOINTS[label] ?? 0
+  if (label in REVENUE_MIDPOINTS) return REVENUE_MIDPOINTS[label]
+  // Older profiles (and the demo) hold a typed figure, not a range: "2.8M",
+  // "$450k", "450000". Read it rather than opening the page at $0.
+  const m = String(label ?? '').replace(/[$,\s]/g, '').match(/^(\d+(?:\.\d+)?)([kKmM]?)$/)
+  if (!m) return 0
+  const mult = { k: 1_000, m: 1_000_000 }[m[2].toLowerCase()] ?? 1
+  return Math.round(Number(m[1]) * mult)
 }
 
 // ── Goal timeline → months ────────────────────────────────────────────────────
 
+// ⚠️ Every value returned here must be one the Timeline dropdown offers. It
+// used to return 42 for "3–5 years" and 72 for "5+ years", neither of which
+// the dropdown has, so the box read "6 months" while the chart said 42.
 function parseTimelineMonths(label) {
   if (!label) return 24
   if (label.includes('6 month')) return 6
+  if (label.includes('5+'))      return 60
+  if (/3\s*(–|-|to)\s*5/.test(label)) return 48
+  if (/(2\s*(–|-|to)\s*)?3 year/.test(label)) return 36
   if (label.includes('1 year'))  return 12
   if (label.includes('2 year'))  return 24
-  if (label.includes('3'))       return 42
-  if (label.includes('5+'))      return 72
   return 24
 }
 
@@ -213,7 +224,7 @@ function ProjectionTooltip({ active, payload, label }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Trajectories() {
-  const { profile } = useAuth()
+  const { profile, company } = useAuth()
   const [milestones,  setMilestones]  = useState(null)
   const [bizProfile,  setBizProfile]  = useState(null)
 
@@ -345,7 +356,11 @@ export default function Trajectories() {
       } catch { /* ignore */ }
     } catch (err) {
       setStreamingText('')
-      setPlanError(err?.message || 'Could not generate plan. Please try again.')
+      // The edge refuses AI for the demo with a 403; show the sentence, not
+      // the raw "Claude function error 403: {...}".
+      setPlanError(isDemoCompany(company)
+        ? 'Solomon is switched off in this demo. In your own account he writes the plan here.'
+        : err?.message || 'Could not generate plan. Please try again.')
     } finally {
       setPlanLoading(false)
     }

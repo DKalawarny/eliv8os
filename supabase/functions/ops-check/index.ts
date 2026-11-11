@@ -14,6 +14,7 @@
  * ⚠️ Never includes anybody's words or answers — counts and statuses only.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { sweepOrphanCompanyFolders } from '../_shared/storageCleanup.ts'
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json' } })
@@ -88,5 +89,8 @@ Deno.serve(async (req: Request) => {
   ])).filter(Boolean) as Problem[]
   problems.push(...await checkAi())
   const result = await alert(problems)
-  return json({ ok: problems.length === 0, problems: problems.map(p => p.title), ...result })
+  // Files of companies that no longer exist (demo copies are wiped by a SQL
+  // job, which cannot reach storage). Never fails the check itself.
+  const swept = await sweepOrphanCompanyFolders(admin).catch(() => -1)
+  return json({ ok: problems.length === 0, problems: problems.map(p => p.title), swept, ...result })
 })

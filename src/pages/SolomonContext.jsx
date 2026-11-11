@@ -307,7 +307,7 @@ function MemorySection({ rows, onDismiss }) {
           <button
             type="button"
             onClick={() => onDismiss(r.id)}
-            className="shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-[12.5px] font-semibold text-ink-300 hover:text-red-600 px-2 py-1"
+            className="shrink-0 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 focus:opacity-100 transition-opacity text-[12.5px] font-semibold text-ink-300 hover:text-red-600 px-2 py-1"
           >
             Remove
           </button>

@@ -34,7 +34,7 @@ export default function HiringScorecard({ data }) {
               <li key={i} className="flex items-start gap-2 group">
                 <span className="flex-shrink-0 font-semibold text-brand-600 w-5">{i + 1}.</span>
                 <span className="flex-1">{o}</span>
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">
+                <span className="opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 transition-opacity mt-0.5">
                   <PushToBoardButton title={typeof o === 'string' ? o : ''} />
                 </span>
               </li>
@@ -102,7 +102,7 @@ export default function HiringScorecard({ data }) {
                 <div key={key} className="flex gap-3 text-sm text-gray-800 group items-start">
                   <span className="font-semibold text-brand-600 w-12 flex-shrink-0">{label}</span>
                   <span className="flex-1">{data.ramp_plan[key]}</span>
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 flex-shrink-0">
+                  <span className="opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 transition-opacity mt-0.5 flex-shrink-0">
                     <PushToBoardButton title={`${label}: ${data.ramp_plan[key]}`} />
                   </span>
                 </div>

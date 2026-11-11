@@ -139,7 +139,7 @@ function Row({ item, onPick, highlight = false }) {
         <Link
           to={item.to}
           title="Open the full tool"
-          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-ink-300 hover:text-ink-700 p-1"
+          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 focus:opacity-100 transition-opacity text-ink-300 hover:text-ink-700 p-1"
         >
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M7 17 17 7" /><path d="M8 7h9v9" />

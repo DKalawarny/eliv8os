@@ -58,6 +58,15 @@ export async function deleteTaskAttachment(att) {
   await supabase.storage.from(BUCKET).remove([att.file_path]).catch(() => null)
 }
 
+// Call BEFORE deleting the task. The task's delete cascades its attachment
+// rows away, but the files stay in storage with nothing pointing to them, so
+// a file the owner deleted would still exist (found in the 11 Nov audit).
+export async function removeFilesForTask(workOrderId) {
+  const atts = await listTaskAttachments(workOrderId).catch(() => [])
+  const paths = atts.map(a => a.file_path).filter(Boolean)
+  if (paths.length) await supabase.storage.from(BUCKET).remove(paths).catch(() => null)
+}
+
 export async function openTaskAttachment(att) {
   const url = await getSignedUrl(att.file_path, 300)
   window.open(url, '_blank', 'noopener')
