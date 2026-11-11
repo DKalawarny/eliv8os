@@ -76,11 +76,18 @@ function DayCell({ cell, events, sessions, isSelected, onSelect }) {
       </div>
 
       {/* Event chips — keep compact, max 2 */}
-      <div className="space-y-0.5 flex-1">
+      <div className="hidden sm:block space-y-0.5 flex-1">
         {visibleEvents.map(ev => <EventChip key={ev.id} event={ev} />)}
         {overflowEvents > 0 && (
           <div className="text-[10px] text-ink-400 px-1">+{overflowEvents} more</div>
         )}
+      </div>
+      {/* A phone's day cell is ~50px: a title shrank to an unreadable "▸ …"
+          (11 Nov audit). Dots there; tapping the day lists them in full. */}
+      <div className="sm:hidden flex flex-wrap gap-0.5 flex-1 content-start">
+        {events.slice(0, 6).map(ev => (
+          <span key={ev.id} className={`w-1.5 h-1.5 rounded-full ${eventDot(ev)}`} />
+        ))}
       </div>
 
       {/* Work-session bars — bottom of cell */}
@@ -111,6 +118,17 @@ function DayCell({ cell, events, sessions, isSelected, onSelect }) {
 }
 
 // ── Event chips ───────────────────────────────────────────────────────────────
+
+function eventDot(event) {
+  if (event.type === 'milestone-end') {
+    const st = event.meta?.status ?? 'open'
+    return st === 'completed' ? 'bg-green-500' : st === 'overdue' ? 'bg-red-500' : 'bg-brand-500'
+  }
+  if (event.type === 'trial-end') return 'bg-amber-500'
+  if (event.type === 'subscription-canceled') return 'bg-red-500'
+  if (event.type === 'subscription-renewal') return 'bg-blue-500'
+  return 'bg-ink-300'
+}
 
 function EventChip({ event }) {
   switch (event.type) {

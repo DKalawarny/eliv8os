@@ -922,7 +922,7 @@ function Row({ file, expanded, onToggle, onDelete }) {
             )}
           </div>
           <div className="text-xs text-ink-400 mt-0.5">
-            {labelForKind(file.kind)} · {formatBytes(file.size_bytes)} · {formatDate(file.created_at)}
+            {[labelForKind(file.kind), formatBytes(file.size_bytes), formatDate(file.created_at)].filter(Boolean).join(' · ')}
           </div>
         </div>
         <span className="text-ink-300 text-sm">{expanded ? '−' : '+'}</span>

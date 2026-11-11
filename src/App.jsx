@@ -222,7 +222,8 @@ function RequireWayout({ children }) {
   const location = useLocation()
   if (loading) return <LoadingScreen />
   if (!session) {
-    return <Navigate to={`/wayout/enter?next=${encodeURIComponent(location.pathname)}`} replace />
+    // WAYOUT_BASE: on getunstuckmap.com the address has no /wayout part.
+    return <Navigate to={`${WAYOUT_BASE}/enter?next=${encodeURIComponent(location.pathname)}`} replace />
   }
   return children
 }

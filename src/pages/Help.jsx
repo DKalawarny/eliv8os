@@ -47,7 +47,7 @@ const FAQ = [
   },
   {
     q: 'How do I add my employees / techs?',
-    a: 'Settings → Team & access → Team card. Add their name, email, and role. They\'ll show up on the Jobs so you can assign tasks and email them updates. Adding staff does not create logins for them. Only people you invite as advisors can sign in.',
+    a: 'Daily logs → Crew and reminders, at the bottom of the page. Add their name, and an email or phone if you want them reminded. They show up on Tasks so you can assign work to them. Adding crew does not create logins for them; they write their daily log from their own link.',
   },
   {
     q: 'What\'s the difference between a milestone and a task?',
@@ -146,11 +146,11 @@ const TOOL_GUIDES = [
     ],
   },
   {
-    name:   'Jobs',
+    name:   'Tasks',
     href:   '/board',
-    short:  'Kanban for the day-to-day work: assign tasks, email staff, track WIP.',
+    short:  'A board for the day-to-day work: assign tasks, email staff, see what is in progress.',
     steps: [
-      'Add staff in Settings → Team & access first so you can assign tasks to specific people.',
+      'Add your crew under Daily logs → Crew and reminders first so you can assign tasks to specific people.',
       'Create tasks under the relevant milestone or as standalone work.',
       'Drag between columns: Todo → In progress → Done.',
       'Assignees get an email when work is assigned to them or status changes (if they have an email on file).',

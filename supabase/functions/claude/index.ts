@@ -73,8 +73,12 @@ import { authedUser, serviceClient }    from '../_shared/supabase.ts'
 const CLAUDE_INPUT_PER_M  = 3.00
 const CLAUDE_OUTPUT_PER_M = 15.00
 
-function computeClaudeCost(tokensIn: number, tokensOut: number): number {
-  const inCost  = (tokensIn  || 0) / 1_000_000 * CLAUDE_INPUT_PER_M
+// ⚠️ CACHED TOKENS ARE BILLED TOO. Anthropic reports them apart from
+// input_tokens: a cache write costs 1.25x input (2x with the 1h TTL the
+// conversation uses) and a cache read 0.1x. They were never recorded, so the
+// cost log and the spend cap both left them out (11 Nov 2026 audit).
+function computeClaudeCost(tokensIn: number, tokensOut: number, cacheWrite = 0, cacheRead = 0, writeMult = 1.25): number {
+  const inCost  = ((tokensIn || 0) + (cacheWrite || 0) * writeMult + (cacheRead || 0) * 0.1) / 1_000_000 * CLAUDE_INPUT_PER_M
   const outCost = (tokensOut || 0) / 1_000_000 * CLAUDE_OUTPUT_PER_M
   return Number((inCost + outCost).toFixed(5))
 }
@@ -401,16 +405,22 @@ async function recordUsage(
     kind:      string
     tokensIn:  number
     tokensOut: number
+    cacheWrite?: number
+    cacheRead?:  number
+    cacheTtl?:   string
   },
 ): Promise<void> {
-  const cost = computeClaudeCost(args.tokensIn, args.tokensOut)
+  const cacheWrite = args.cacheWrite ?? 0
+  const cacheRead  = args.cacheRead  ?? 0
+  const cost = computeClaudeCost(args.tokensIn, args.tokensOut, cacheWrite, cacheRead, args.cacheTtl === '1h' ? 2 : 1.25)
   const { error } = await admin.from('usage_events').insert({
     company_id: args.companyId,
     user_id:    args.userId,
     tool_id:    args.toolId,
     provider:   'anthropic',
     kind:       args.kind || 'generate',
-    tokens_in:  args.tokensIn,
+    // Every input token the model read, cached or not.
+    tokens_in:  args.tokensIn + cacheWrite + cacheRead,
     tokens_out: args.tokensOut,
     units:      1,
     cost_usd:   cost,
@@ -542,8 +552,10 @@ THE OWNER'S COUNTRY: read it from their location in the business context. Use th
 // (out tokens running total) so we have authoritative usage to log on close.
 
 interface ObservedUsage {
-  tokensIn:  number
-  tokensOut: number
+  tokensIn:   number
+  tokensOut:  number
+  cacheWrite: number
+  cacheRead:  number
 }
 
 async function observeUpstream(
@@ -570,7 +582,10 @@ async function observeUpstream(
           try {
             const data = JSON.parse(payload)
             if (data.type === 'message_start') {
-              out.tokensIn = data.message?.usage?.input_tokens ?? out.tokensIn
+              const u = data.message?.usage ?? {}
+              out.tokensIn   = u.input_tokens ?? out.tokensIn
+              out.cacheWrite = u.cache_creation_input_tokens ?? out.cacheWrite
+              out.cacheRead  = u.cache_read_input_tokens ?? out.cacheRead
             }
             if (data.type === 'message_delta') {
               out.tokensOut = data.usage?.output_tokens ?? out.tokensOut
@@ -787,8 +802,10 @@ Deno.serve(async (req) => {
         .filter(c => c.type === 'text')
         .map(c => c.text ?? '')
         .join('')
-      const tokensIn  = data.usage?.input_tokens  ?? 0
-      const tokensOut = data.usage?.output_tokens ?? 0
+      const tokensIn   = data.usage?.input_tokens  ?? 0
+      const tokensOut  = data.usage?.output_tokens ?? 0
+      const cacheWrite = data.usage?.cache_creation_input_tokens ?? 0
+      const cacheRead  = data.usage?.cache_read_input_tokens ?? 0
 
       // Log usage server-side. Don't await — if it fails, we still want
       // the response to reach the user. Edge functions hold open for
@@ -812,13 +829,16 @@ Deno.serve(async (req) => {
         kind,
         tokensIn,
         tokensOut,
+        cacheWrite,
+        cacheRead,
+        cacheTtl: body.cacheTtl,
       })
 
       return json({
         text,
         content:     data.content ?? [],
         stop_reason: data.stop_reason ?? null,
-        usage: { input_tokens: tokensIn, output_tokens: tokensOut },
+        usage: { input_tokens: tokensIn, output_tokens: tokensOut, cache_creation_input_tokens: cacheWrite, cache_read_input_tokens: cacheRead },
       })
     }
 
@@ -838,7 +858,7 @@ Deno.serve(async (req) => {
     }
 
     const [forward, observe] = upstream.body.tee()
-    const observedUsage: ObservedUsage = { tokensIn: 0, tokensOut: 0 }
+    const observedUsage: ObservedUsage = { tokensIn: 0, tokensOut: 0, cacheWrite: 0, cacheRead: 0 }
 
     // Kick off the side-channel observer. We *don't* await it here —
     // we want the forward stream to start flowing to the client
@@ -852,8 +872,11 @@ Deno.serve(async (req) => {
         userId:    user.userId,
         toolId,
         kind,
-        tokensIn:  observedUsage.tokensIn,
-        tokensOut: observedUsage.tokensOut,
+        tokensIn:   observedUsage.tokensIn,
+        tokensOut:  observedUsage.tokensOut,
+        cacheWrite: observedUsage.cacheWrite,
+        cacheRead:  observedUsage.cacheRead,
+        cacheTtl:   body.cacheTtl,
       })
     }).catch((err) => {
       console.error('[claude] observer failed:', err)

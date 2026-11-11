@@ -747,7 +747,7 @@ function DocRow({ doc, renewalIso, onSetRenewal, onView, onDelete }) {
         <div className="mt-2.5 ml-9 flex items-center gap-2 flex-wrap">
           <label className="text-[11px] font-semibold text-ink-600">Renewal date:</label>
           <input
-            type="date"
+            type="date" max="9999-12-31"
             value={draft}
             onChange={e => setDraft(e.target.value)}
             className="rounded-md border border-ink-200 px-2 py-1 text-xs text-ink-800 focus:outline-none focus:ring-2 focus:ring-brand-300"

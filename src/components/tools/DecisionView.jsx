@@ -98,7 +98,7 @@ export default function DecisionView({ result }) {
               <li key={i} className="text-[14px] leading-[1.6] text-ink-700">
                 {c.gap}
                 {c.who_would_know && (
-                  <span className="text-ink-400"> — {c.who_would_know} would know.</span>
+                  <span className="text-ink-400"> Who would know: {c.who_would_know}.</span>
                 )}
               </li>
             ))}

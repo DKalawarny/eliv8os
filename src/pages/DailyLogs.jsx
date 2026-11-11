@@ -89,16 +89,29 @@ function repeatedBlockers(logs) {
   const STOP = new Set(['the','and','for','was','were','with','that','this','from','they','them','had','has','have','been','into','over','about','again','then','than','when','what','who','not','but','out','all','are','our','you','your','his','her','its','it','on','in','to','of','a','i','at','by','up','me','my','no','so','as','is','be','an','or','if','we','he'])
   const words = t => new Set(String(t).toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(w => w.length > 3 && !STOP.has(w)))
   const withBlockers = logs.filter(l => l.blockers?.trim())
-  const pairs = []
+  // Matching logs are joined into one GROUP. Returning pairs showed one gate
+  // locked three times as two pairs, the same log printed in both (11 Nov
+  // audit). A group lists each day once.
+  const parent = withBlockers.map((_, i) => i)
+  const root = i => (parent[i] === i ? i : (parent[i] = root(parent[i])))
   for (let i = 0; i < withBlockers.length; i++) {
     for (let j = i + 1; j < withBlockers.length; j++) {
       const a = words(withBlockers[i].blockers)
       const b = words(withBlockers[j].blockers)
-      const shared = [...a].filter(w => b.has(w))
-      if (shared.length >= 2) pairs.push({ a: withBlockers[i], b: withBlockers[j], shared })
+      if ([...a].filter(w => b.has(w)).length >= 2) parent[root(j)] = root(i)
     }
   }
-  return pairs.slice(0, 2)
+  const groups = new Map()
+  withBlockers.forEach((l, i) => {
+    const r = root(i)
+    if (!groups.has(r)) groups.set(r, [])
+    groups.get(r).push(l)
+  })
+  return [...groups.values()]
+    .filter(g => g.length >= 2)
+    .map(g => [...g].sort((x, y) => String(x.log_date).localeCompare(String(y.log_date))))
+    .sort((x, y) => y.length - x.length)
+    .slice(0, 2)
 }
 
 export default function DailyLogs() {
@@ -325,23 +338,26 @@ export default function DailyLogs() {
           </div>
 
       {(() => {
-        const pairs = repeatedBlockers(logs)  // pattern always over ALL logs, not the filtered view
-        if (!pairs.length) return null
+        const groups = repeatedBlockers(logs)  // pattern always over ALL logs, not the filtered view
+        if (!groups.length) return null
+        const most = groups[0].length
         return (
           <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
             <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
-              Same thing came up twice
+              {most === 2 ? 'Same thing came up twice' : `Same thing came up ${most} times`}
             </p>
             <p className="text-[13px] text-ink-700 mt-1.5 leading-relaxed">
-              Worth a look, two different days ran into something similar. It may be
+              Worth a look, different days ran into something similar. It may be
               coincidence, or it may be one thing you can fix once.
             </p>
-            <ul className="mt-3 space-y-2">
-              {pairs.map((p, i) => (
+            <ul className="mt-3 space-y-3">
+              {groups.map((g, i) => (
                 <li key={i} className="text-[13px] text-ink-800 leading-relaxed">
-                  <span className="text-ink-500">{humanDate(p.a.log_date)}:</span> {p.a.blockers}
-                  <br />
-                  <span className="text-ink-500">{humanDate(p.b.log_date)}:</span> {p.b.blockers}
+                  {g.map(l => (
+                    <div key={l.id}>
+                      <span className="text-ink-500">{humanDate(l.log_date)}:</span> {l.blockers}
+                    </div>
+                  ))}
                 </li>
               ))}
             </ul>

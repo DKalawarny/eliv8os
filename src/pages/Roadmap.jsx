@@ -1524,7 +1524,7 @@ function SideQuestRow({ milestone: m, status, onToggleComplete, onSetDates }) {
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-orange-700 mb-1">Start date</label>
             <input
-              type="date"
+              type="date" max="9999-12-31"
               value={startDate}
               min={today}
               onChange={e => setStartDate(e.target.value)}
@@ -1534,7 +1534,7 @@ function SideQuestRow({ milestone: m, status, onToggleComplete, onSetDates }) {
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-orange-700 mb-1">Due date</label>
             <input
-              type="date"
+              type="date" max="9999-12-31"
               value={endDate}
               min={startDate || today}
               onChange={e => setEndDate(e.target.value)}
@@ -2908,7 +2908,7 @@ function QuickWorkOrderModal({ draft, teamMembers, templates = [], profile, comp
           {/* Due date */}
           <div>
             <label className="block text-xs font-semibold text-ink-600 mb-1.5">Due date</label>
-            <input type="date" value={due_date} onChange={e => setDueDate(e.target.value)}
+            <input type="date" max="9999-12-31" value={due_date} onChange={e => setDueDate(e.target.value)}
               className="w-full rounded-xl border border-ink-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-brand-300" />
           </div>
 

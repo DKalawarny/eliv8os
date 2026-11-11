@@ -55,7 +55,7 @@ export default function Calendar() {
       const [msRes, ciRes, docsRes] = await Promise.all([
         supabase
           .from('milestones')
-          .select('id, title, timeframe, start_date, end_date, completed')
+          .select('id, title, timeframe, start_date, end_date, completed, actions, actions_done')
           .eq('company_id', profile.company_id),
         supabase
           .from('checkins')
@@ -105,6 +105,12 @@ export default function Calendar() {
 
   const handleMarkComplete = async (milestoneId) => {
     if (!profile?.company_id) return
+    // One click closed the whole milestone, steps still open or not (11 Nov
+    // audit). Ask only when something is actually unfinished.
+    const ms = (data.milestones ?? []).find(m => m.id === milestoneId)
+    const done = new Set(ms?.actions_done ?? [])
+    const open = (ms?.actions ?? []).filter(a => !done.has(a)).length
+    if (open > 0 && !window.confirm(`"${ms.title}" still has ${open} step${open === 1 ? '' : 's'} not done. Mark the whole milestone complete anyway?`)) return
     const { error } = await supabase
       .from('milestones')
       .update({ completed: true })

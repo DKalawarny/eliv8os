@@ -16,7 +16,7 @@ export default function DemoBanner() {
   }
 
   return (
-    <div className="bg-brand-600 text-white px-4 py-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-center">
+    <div className="kb-hide bg-brand-600 text-white px-4 py-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-center">
       <span className="font-medium">
         You&rsquo;re exploring a live demo with sample data from {DEMO_BUSINESS}, a made-up company.
       </span>

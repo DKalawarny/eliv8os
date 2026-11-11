@@ -360,7 +360,7 @@ function FormView({ form, canSubmit, error, capError, onChange, onSubmit }) {
           </div>
 
           <Field label="Target start date" hint="When would you ideally have them in the seat?">
-            <input type="date" value={form.target_start} onChange={onChange('target_start')} className="max-w-xs" />
+            <input type="date" max="9999-12-31" value={form.target_start} onChange={onChange('target_start')} className="max-w-xs" />
           </Field>
 
           <div className="flex items-center gap-3 pt-1">

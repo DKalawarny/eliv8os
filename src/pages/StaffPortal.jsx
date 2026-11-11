@@ -1089,6 +1089,10 @@ function ShiftEndRecap({ workOrders, crew = [], metricDefs = [], onSubmitDailyLo
   const [sending, setSending]     = useState(false)
   const [error, setError]         = useState(null)
   const [success, setSuccess]     = useState(false)
+  // When this visit last sent a recap. The form folds away 1.5s after a send,
+  // and the folded card said nothing, so a crew member could not tell it had
+  // gone (11 Nov audit).
+  const [sentAt, setSentAt]       = useState(null)
   const recognitionRef            = useRef(null)
 
   const SpeechRecognition = useMemo(
@@ -1199,6 +1203,7 @@ function ShiftEndRecap({ workOrders, crew = [], metricDefs = [], onSubmitDailyLo
         setFlhaDone(null)
         setVoiceWoIds(new Set())
         setSuccess(true)
+        setSentAt(new Date())
         // Auto-collapse after a beat so the crew can move on without a
         // dangling form. The success message stays briefly so they know it
         // landed.
@@ -1223,7 +1228,9 @@ function ShiftEndRecap({ workOrders, crew = [], metricDefs = [], onSubmitDailyLo
         >
           <div className="flex-1">
             <p className="text-sm font-bold text-ink-900">Today's log</p>
-            <p className="text-[11px] text-ink-500 leading-snug">How's today going? Add to it any time, the office reads it tomorrow.</p>
+            {sentAt
+              ? <p className="text-[11px] text-emerald-700 font-semibold leading-snug">✓ Sent at {sentAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. The office has it. You can add more any time.</p>
+              : <p className="text-[11px] text-ink-500 leading-snug">How's today going? Add to it any time, the office reads it tomorrow.</p>}
           </div>
           <span className="text-[11px] font-semibold text-brand-700">Open →</span>
         </button>

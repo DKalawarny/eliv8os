@@ -16,7 +16,7 @@ export default function ResetPassword() {
   const [password, setPassword]         = useState('')
   const [confirm, setConfirm]           = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [status, setStatus]             = useState('waiting') // waiting | ready | saving | done | error
+  const [status, setStatus]             = useState('waiting') // waiting | ready | saving | done | error | nolink
   const [errorMsg, setErrorMsg]         = useState(null)
 
   useEffect(() => {
@@ -28,7 +28,13 @@ export default function ResetPassword() {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) setStatus('ready')
     })
-    return () => subscription.unsubscribe()
+    // ⚠️ Without a usable link nothing ever fires, and the spinner turned
+    // forever (11 Nov audit). An expired link says so in the hash; a missing
+    // one just never verifies, so give it a few seconds and then say so.
+    const hash = new URLSearchParams(window.location.hash.slice(1))
+    if (hash.get('error')) setStatus('nolink')
+    const t = setTimeout(() => setStatus(s => (s === 'waiting' ? 'nolink' : s)), 8000)
+    return () => { clearTimeout(t); subscription.unsubscribe() }
   }, [])
 
   async function handleSubmit(e) {
@@ -65,6 +71,20 @@ export default function ResetPassword() {
               className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 px-5 py-2.5 rounded-lg transition-colors"
             >
               Go to login →
+            </Link>
+          </div>
+        ) : status === 'nolink' ? (
+          <div className="text-center">
+            <h1 className="text-xl font-bold text-ink-900 mb-2">This reset link did not work</h1>
+            <p className="text-sm text-ink-500 mb-6">
+              It may have expired, been used already, or been cut off when it was copied.
+              Ask for a new one and use the newest email.
+            </p>
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 px-5 py-2.5 rounded-lg transition-colors"
+            >
+              Get a new link →
             </Link>
           </div>
         ) : status === 'waiting' ? (

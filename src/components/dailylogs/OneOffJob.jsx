@@ -163,7 +163,7 @@ export default function OneOffJob({ profile, company, onCreated, open = false })
             <label className="flex flex-col gap-1 text-[12px] font-semibold text-ink-600">
               Starts
               <input
-                type="date"
+                type="date" max="9999-12-31"
                 value={day}
                 onChange={e => setDay(e.target.value)}
                 className="rounded-lg border border-ink-200 px-3 py-2 text-sm font-normal text-ink-700 focus:outline-none focus:ring-2 focus:ring-brand-300"
@@ -172,7 +172,7 @@ export default function OneOffJob({ profile, company, onCreated, open = false })
             <label className="flex flex-col gap-1 text-[12px] font-semibold text-ink-600">
               Ends
               <input
-                type="date"
+                type="date" max="9999-12-31"
                 value={endDay}
                 min={day || undefined}
                 onChange={e => setEndDay(e.target.value)}

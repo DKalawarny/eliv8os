@@ -241,7 +241,7 @@ export default function Done() {
       <ul className="wayout__ledger">
         {moves.map((m, i) => (
           <li key={i} className={m.done ? 'is-done' : ''}>
-            <span>{m.done ? '✓' : '—'}</span> {m.title}
+            <span>{m.done ? '✓' : '○'}</span> {m.title}
           </li>
         ))}
       </ul>

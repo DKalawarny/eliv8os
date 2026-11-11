@@ -862,8 +862,11 @@ function WorkOrderCard({ order, members = [], milestone, onEdit, onMove, onDelet
         {/* Milestone badge */}
         {milestone && (
           <div className="mb-2.5">
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full max-w-full truncate">
-              🗺️ {milestone.title}
+            {/* truncate has no effect on a flex box's own text; the "…" needs
+                the text in its own span. */}
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full max-w-full" title={milestone.title}>
+              <span aria-hidden>🗺️</span>
+              <span className="truncate min-w-0">{milestone.title}</span>
             </span>
           </div>
         )}
@@ -1158,7 +1161,7 @@ function WorkOrderModal({ order, appUsers, staff, milestones, templates = [], ch
             </div>
             <div>
               <label className="block text-xs font-semibold text-ink-600 mb-1.5">Due date</label>
-              <input type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)}
+              <input type="date" max="9999-12-31" value={form.due_date} onChange={e => set('due_date', e.target.value)}
                 className="w-full rounded-xl border border-ink-200 px-3 py-2.5 text-sm text-ink-800 focus:outline-none focus:ring-2 focus:ring-brand-300" />
             </div>
 

@@ -246,7 +246,7 @@ export const ANSWERS = [
     category: 'Pricing',
     updated: '2026-10-06',
     answer:
-      'Two signs, and neither is winning too many jobs. You are busy and the money does not arrive. And you cannot say what a specific finished job actually cost you to deliver — because if you cannot, your price was set against a guess and has probably not moved since.',
+      'Two signs, and neither is winning too many jobs. You are busy and the money does not arrive. And you cannot say what a specific finished job actually cost you to deliver, because if you cannot, your price was set against a guess and has probably not moved since.',
     body: [
       { h: 'Busy and broke is the classic signature',
         p: 'Full schedule, good reputation, nothing in the bank. That combination is almost always pricing rather than spending. Work is being sold for less than it costs to do, and volume is hiding it by keeping everyone occupied.' },
@@ -743,7 +743,7 @@ export const ANSWERS = [
     faqs: [
       { q: 'Should I do it at cost instead of free?', a: 'Often cleaner. Covering materials means the gift is your labour, which is easier to define, easier to cap and easier for them to accept.' },
       { q: 'Can I claim it against tax?', a: 'That depends entirely on jurisdiction and structure, and donated services are treated differently from donated goods in many places. Ask your accountant rather than assuming.' },
-      { q: 'What if the work goes wrong?', a: 'You are usually just as liable as on paid work. Insurance, permits and standards all still apply — free does not mean informal.' },
+      { q: 'What if the work goes wrong?', a: 'You are usually just as liable as on paid work. Insurance, permits and standards all still apply. Free does not mean informal.' },
     ],
   },
   {

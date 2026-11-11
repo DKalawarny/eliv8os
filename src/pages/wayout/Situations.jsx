@@ -23,7 +23,7 @@ import Bridge from './Bridge'
 const json = o => JSON.stringify(o, null, 2)
 
 export function SituationIndex() {
-  const title = `Being stuck, in specific situations — ${WAYOUT_NAME_TITLE}`
+  const title = `Being stuck, in specific situations · ${WAYOUT_NAME_TITLE}`
   return (
     <WayoutShell noindex={false} canonicalPath="/stuck" wide home signIn>
       <Helmet>
