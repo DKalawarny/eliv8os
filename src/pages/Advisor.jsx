@@ -17,6 +17,7 @@ import { indexChatExchange } from '../lib/rag/chatIndexer'
 import SolomonLauncher from '../components/advisor/SolomonLauncher'
 import { rememberFromExchange, claimDueCommitment } from '../lib/memory'
 import { plainDashes } from '../lib/plainDashes'
+import { indexMissingFiles } from '../lib/rag/indexer'
 
 /**
  * Advisor — the owner's daily AI coaching chat.
@@ -98,6 +99,15 @@ function markOpenedToday(userId) {
 
 export default function Advisor() {
   const { profile, company } = useAuth()
+
+  // Files with text but no search vectors are invisible to search_library.
+  // Repair them in the background before he asks about one. The demo is
+  // seeded with its own vectors.
+  useEffect(() => {
+    if (profile?.company_id && company && !isDemoCompany(company)) {
+      indexMissingFiles(profile.company_id).catch(() => {})
+    }
+  }, [profile?.company_id, company])
   const [messages,        setMessages]        = useState([])
   /**
    * ⭐⭐ OFF THE RECORD. Daniel, 4 Oct: "an incognito mode for personal

@@ -13,6 +13,8 @@ import { runLibraryAnalysis, getLibraryAnalysis } from '../../lib/libraryAnalysi
 import { checkGoogleFreshness, describeFreshness } from '../../lib/cloudFreshness'
 import UploadDialog from './UploadDialog'
 import { MAX_MB } from '../../lib/knowledgeFiles'
+import { indexMissingFiles } from '../../lib/rag/indexer'
+import { isDemoCompany } from '../../lib/demo'
 import CloudImportModal from './CloudImportModal'
 import ManualFinancialsModal from './ManualFinancialsModal'
 
@@ -35,7 +37,13 @@ const CATEGORY_TONES = {
 }
 
 export default function UploadedTab({ onCountChange }) {
-  const { profile }              = useAuth()
+  const { profile, company }     = useAuth()
+  // Same repair as the Solomon page: files with text but no search vectors.
+  useEffect(() => {
+    if (profile?.company_id && company && !isDemoCompany(company)) {
+      indexMissingFiles(profile.company_id).catch(() => {})
+    }
+  }, [profile?.company_id, company])
   const [files, setFiles]        = useState(null)
   const [error, setError]        = useState(null)
   const [selected, setSelected]  = useState(null)

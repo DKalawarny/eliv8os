@@ -151,3 +151,49 @@ export async function indexKnowledgeFile(knowledgeFile, originalFile, onProgress
 
   return { chunksIndexed: rows.length }
 }
+
+/**
+ * Index any of the company's files that have text but no search vectors.
+ *
+ * ⚠️ WHY. Solomon finds files by vector search. A file stored before search
+ * worked (it was dead until August 2026), or one whose embedding call failed,
+ * has text but no vectors, so Solomon answered "nothing came back" about a file
+ * sitting in the library. The 11 Nov 2026 audit found six such files in one
+ * workspace. This repairs them quietly, once per visit. Embeddings are free
+ * (gte-small in the embed function); no Vision call is made here.
+ */
+const healedThisVisit = new Set()
+
+export async function indexMissingFiles(companyId, { max = 10 } = {}) {
+  if (!companyId || healedThisVisit.has(companyId)) return { indexed: 0 }
+  healedThisVisit.add(companyId)
+
+  const [{ data: files }, { data: chunks }] = await Promise.all([
+    supabase
+      .from('knowledge_files')
+      .select('id, company_id, extracted_text, mime_type, title')
+      .eq('company_id', companyId)
+      .eq('status', 'ready')
+      .not('extracted_text', 'is', null),
+    supabase
+      .from('document_chunks')
+      .select('knowledge_file_id')
+      .eq('company_id', companyId)
+      .not('embedding', 'is', null)
+      .limit(20000),
+  ])
+  const hasVectors = new Set((chunks ?? []).map(c => c.knowledge_file_id))
+  const missing = (files ?? []).filter(f => f.extracted_text?.trim() && !hasVectors.has(f.id)).slice(0, max)
+
+  let indexed = 0
+  for (const f of missing) {
+    try {
+      const { chunksIndexed } = await indexKnowledgeFile(f)
+      if (chunksIndexed) indexed += 1
+    } catch (err) {
+      console.warn('[RAG] could not index', f.title, err)
+    }
+  }
+  if (indexed) console.info(`[RAG] indexed ${indexed} file(s) that had no search vectors`)
+  return { indexed }
+}
